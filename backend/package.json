@@ -1,0 +1,25 @@
+{
+  "name": "syncdoc-backend",
+  "version": "1.0.0",
+  "description": "SyncDoc backend - AST database, CRDT sync engine, and export pipeline",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongoose": "^8.5.0",
+    "socket.io": "^4.7.5",
+    "yjs": "^13.6.18",
+    "y-websocket": "^2.0.4",
+    "dompurify": "^3.1.6",
+    "jsdom": "^24.1.1",
+    "puppeteer": "^22.13.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
