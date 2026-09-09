@@ -27,6 +27,10 @@ const DocumentSchema = new mongoose.Schema(
   { timestamps: true } // adds createdAt and updatedAt automatically
 );
 
+DocumentSchema.index({ title: 'text' });
+DocumentSchema.index({ owner: 1 });
+DocumentSchema.index({ updatedAt: -1 });
+
 DocumentSchema.pre('save', function (next) {
   try {
     validateDocumentContent(this.content);
