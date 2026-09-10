@@ -8,6 +8,7 @@ const NODE_TYPES = [
   'code',
   'blockquote',
   'list',
+  'listItem',
   'list-item',
   'text',
   'image',
@@ -18,6 +19,7 @@ const NODE_TYPES = [
 /**
  * Recursive Schema for AST Nodes
  * Supports nested structures (e.g., root -> blocks -> inline text/elements)
+ * Compatible with both tree models (root.children) and document content arrays.
  */
 const ASTNodeSchema = new mongoose.Schema(
   {
@@ -38,6 +40,14 @@ const ASTNodeSchema = new mongoose.Schema(
     content: {
       type: String,
       default: ''
+    },
+    text: {
+      type: String,
+      default: ''
+    },
+    attrs: {
+      level: { type: Number },
+      language: { type: String }
     },
     attributes: {
       level: {
@@ -78,8 +88,7 @@ const ASTNodeSchema = new mongoose.Schema(
     }
   },
   {
-    _id: false,
-    id: false
+    _id: true
   }
 );
 
@@ -93,8 +102,12 @@ ASTNodeSchema.add({
 
 const ASTNode = mongoose.models.ASTNode || mongoose.model('ASTNode', ASTNodeSchema);
 
-module.exports = {
-  NODE_TYPES,
-  ASTNodeSchema,
-  ASTNode
-};
+// Support both default schema export and named exports
+ASTNodeSchema.NODE_TYPES = NODE_TYPES;
+ASTNodeSchema.ASTNodeSchema = ASTNodeSchema;
+ASTNodeSchema.ASTNode = ASTNode;
+
+module.exports = ASTNodeSchema;
+module.exports.NODE_TYPES = NODE_TYPES;
+module.exports.ASTNodeSchema = ASTNodeSchema;
+module.exports.ASTNode = ASTNode;

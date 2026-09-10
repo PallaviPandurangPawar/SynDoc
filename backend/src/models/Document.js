@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
-const { ASTNodeSchema } = require('./ASTNode');
+const ASTNodeSchema = require('./ASTNode');
+const { validateDocumentContent } = require('../middlewares/validateAST');
 
 /**
  * Traverses an AST tree recursively:
@@ -30,8 +31,15 @@ function calculateASTMetrics(rootNode, currentDepth = 1, visitedIds = new Set())
   let nodeCount = 1;
   let wordCount = 0;
 
-  if (typeof rootNode.content === 'string' && rootNode.content.trim().length > 0) {
-    wordCount += rootNode.content.trim().split(/\s+/).length;
+  const rawContent =
+    typeof rootNode.content === 'string' && rootNode.content.trim().length > 0
+      ? rootNode.content.trim()
+      : typeof rootNode.text === 'string' && rootNode.text.trim().length > 0
+        ? rootNode.text.trim()
+        : '';
+
+  if (rawContent.length > 0) {
+    wordCount += rawContent.split(/\s+/).length;
   }
 
   let maxDepth = currentDepth;
@@ -97,20 +105,31 @@ const ChangeHistorySchema = new mongoose.Schema(
 );
 
 /**
- * Main Document Schema with recursive AST and pre-save change tracking
+ * Main Document Schema with recursive AST, ownership, collaborators, and pre-save change tracking
  */
 const DocumentSchema = new mongoose.Schema(
   {
     title: {
       type: String,
       required: [true, 'Document title is required'],
+      default: 'Untitled Document',
       trim: true,
-      maxlength: [200, 'Title cannot exceed 200 characters'],
-      default: 'Untitled Document'
+      minlength: [1, 'Title cannot be empty'],
+      maxlength: [200, 'Title cannot exceed 200 characters']
     },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    collaborators: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
+    ],
     content: {
-      type: String,
-      default: ''
+      type: [ASTNodeSchema], // Document body as an array of top-level AST nodes
+      default: []
     },
     ast: {
       type: ASTNodeSchema,
@@ -147,21 +166,19 @@ const DocumentSchema = new mongoose.Schema(
   }
 );
 
-/**
- * Pre-save change tracking middleware:
- * 1. Validates AST tree structure (circular reference check + max depth)
- * 2. Computes and updates AST metrics (nodeCount, wordCount, depth)
- * 3. Detects modified paths via this.modifiedPaths()
- * 4. Auto-increments document version on updates
- * 5. Appends an audit entry into changeHistory
- */
+// Indexes
+DocumentSchema.index({ title: 'text' });
+DocumentSchema.index({ owner: 1 });
+DocumentSchema.index({ updatedAt: -1 });
+
 /**
  * Pre-save change tracking logic:
  * 1. Validates AST tree structure (circular reference check + max depth)
  * 2. Computes and updates AST metrics (nodeCount, wordCount, depth)
- * 3. Detects modified paths via doc.modifiedPaths()
- * 4. Auto-increments document version on updates
- * 5. Appends an audit entry into changeHistory
+ * 3. Validates document content array if provided
+ * 4. Detects modified paths via doc.modifiedPaths()
+ * 5. Auto-increments document version on updates
+ * 6. Appends an audit entry into changeHistory
  */
 function preSaveDocument(doc, next) {
   try {
@@ -169,9 +186,29 @@ function preSaveDocument(doc, next) {
     if (doc.ast) {
       const metrics = calculateASTMetrics(doc.ast);
       doc.stats = metrics;
+
+      // Sync content array from ast.children if content is empty
+      if (
+        (!doc.content || doc.content.length === 0) &&
+        Array.isArray(doc.ast.children) &&
+        doc.ast.children.length > 0
+      ) {
+        doc.content = doc.ast.children;
+      }
     }
 
-    // 2. Identify modified paths (excluding internal audit & timestamps)
+    // 2. Validate content array if present
+    if (doc.content && Array.isArray(doc.content) && doc.content.length > 0) {
+      validateDocumentContent(doc.content);
+
+      // Sync ast.children from content if ast has no children
+      if (doc.ast && (!doc.ast.children || doc.ast.children.length === 0)) {
+        doc.ast.children = doc.content;
+        doc.stats = calculateASTMetrics(doc.ast);
+      }
+    }
+
+    // 3. Identify modified paths (excluding internal audit & timestamps)
     const modifiedPaths = typeof doc.modifiedPaths === 'function' ? doc.modifiedPaths() : [];
     const meaningfulChanges = modifiedPaths.filter(
       (path) =>
@@ -181,20 +218,21 @@ function preSaveDocument(doc, next) {
         path !== 'stats'
     );
 
-    // 3. Track changes
+    // 4. Track changes
     if (doc.isNew) {
       doc.version = 1;
+      const stats = doc.stats || { nodeCount: 1, wordCount: 0, depth: 1 };
       doc.changeHistory.push({
         version: 1,
         timestamp: new Date(),
         modifiedBy: doc.lastModifiedBy || 'anonymous',
         modifiedPaths: meaningfulChanges,
         action: 'CREATE',
-        summary: `Document "${doc.title}" created with AST (${doc.stats.nodeCount} node(s), depth ${doc.stats.depth})`,
+        summary: `Document "${doc.title}" created with AST (${stats.nodeCount} node(s), depth ${stats.depth})`,
         stats: {
-          nodeCount: doc.stats.nodeCount,
-          wordCount: doc.stats.wordCount,
-          depth: doc.stats.depth
+          nodeCount: stats.nodeCount,
+          wordCount: stats.wordCount,
+          depth: stats.depth
         }
       });
     } else if (meaningfulChanges.length > 0) {
@@ -206,7 +244,7 @@ function preSaveDocument(doc, next) {
         summaryParts.push(`Title changed to "${doc.title}"`);
       }
       if (meaningfulChanges.includes('content')) {
-        summaryParts.push('Plaintext content modified');
+        summaryParts.push('Document content modified');
       }
 
       const astChanges = meaningfulChanges.filter((p) => p.startsWith('ast'));

@@ -1,61 +1,50 @@
-const crypto = require('crypto');
-
-// In-memory mock storage
-let documents = [];
+const Document = require('../models/Document');
 
 const getAllDocuments = async () => {
-  return documents;
+  return await Document.find().sort({ updatedAt: -1 });
 };
 
 const getDocumentById = async (id) => {
-  const document = documents.find((doc) => doc.id === id);
-  return document || null;
+  return await Document.findById(id);
 };
 
-const createDocument = async ({ title, content = '', ast = {} }) => {
-  const newDocument = {
-    id: crypto.randomUUID(),
+const createDocument = async ({ title, content = [], ast }) => {
+  const docData = {
     title: title.trim(),
-    content: content,
-    ast: ast || {},
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    content,
   };
-
-  documents.push(newDocument);
-  return newDocument;
+  if (ast) docData.ast = ast;
+  const newDocument = new Document(docData);
+  return await newDocument.save();
 };
 
 const updateDocument = async (id, { title, content, ast }) => {
-  const index = documents.findIndex((doc) => doc.id === id);
-
-  if (index === -1) {
+  const existingDoc = await Document.findById(id);
+  if (!existingDoc) {
     return null;
   }
 
-  const existingDoc = documents[index];
+  if (title !== undefined) existingDoc.title = title.trim();
+  if (content !== undefined) existingDoc.content = content;
+  if (ast !== undefined) existingDoc.ast = ast;
 
-  const updatedDoc = {
-    ...existingDoc,
-    title: title !== undefined ? title.trim() : existingDoc.title,
-    content: content !== undefined ? content : existingDoc.content,
-    ast: ast !== undefined ? ast : existingDoc.ast,
-    updatedAt: new Date().toISOString()
-  };
-
-  documents[index] = updatedDoc;
-  return updatedDoc;
+  return await existingDoc.save();
 };
 
 const deleteDocument = async (id) => {
-  const index = documents.findIndex((doc) => doc.id === id);
+  const result = await Document.findByIdAndDelete(id);
+  return !!result;
+};
 
-  if (index === -1) {
-    return false;
-  }
+const searchDocumentsByTitle = async (query) => {
+  return await Document.find(
+    { $text: { $search: query } },
+    { score: { $meta: 'textScore' } }
+  ).sort({ score: { $meta: 'textScore' } });
+};
 
-  documents.splice(index, 1);
-  return true;
+const getDocumentCount = async () => {
+  return await Document.countDocuments();
 };
 
 module.exports = {
@@ -63,5 +52,7 @@ module.exports = {
   getDocumentById,
   createDocument,
   updateDocument,
-  deleteDocument
+  deleteDocument,
+  searchDocumentsByTitle,
+  getDocumentCount,
 };
