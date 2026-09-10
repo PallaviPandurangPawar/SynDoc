@@ -19,8 +19,14 @@ function getYDoc(documentId) {
  * Applies a binary Yjs update (received from a client) to the correct Y.Doc.
  */
 function applyUpdate(documentId, updateUint8Array) {
-  const yDoc = getYDoc(documentId);
-  Y.applyUpdate(yDoc, updateUint8Array);
+  try {
+    const yDoc = getYDoc(documentId);
+    Y.applyUpdate(yDoc, updateUint8Array);
+    return true;
+  } catch (error) {
+    console.error(`❌ [CRDT] Failed to apply update for ${documentId}: ${error.message}`);
+    return false;
+  }
 }
 
 /**
