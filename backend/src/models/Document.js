@@ -8,6 +8,9 @@ const DocumentSchema = new mongoose.Schema(
       type: String,
       required: true,
       default: 'Untitled Document',
+      trim: true,
+      minlength: [1, 'Title cannot be empty'],
+      maxlength: [200, 'Title cannot exceed 200 characters'],
     },
     owner: {
       type: mongoose.Schema.Types.ObjectId,

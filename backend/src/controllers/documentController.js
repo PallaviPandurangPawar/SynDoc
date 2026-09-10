@@ -139,10 +139,58 @@ const deleteDocument = async (req, res) => {
   }
 };
 
+// Search documents by title
+const searchDocuments = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required (use ?q=yourSearchTerm)'
+      });
+    }
+
+    const results = await documentService.searchDocumentsByTitle(q);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Search completed successfully',
+      count: results.length,
+      data: results
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// Get total document count
+const getStats = async (req, res) => {
+  try {
+    const count = await documentService.getDocumentCount();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Stats fetched successfully',
+      data: { totalDocuments: count }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
 module.exports = {
   createDocument,
   getDocuments,
   getDocumentById,
   updateDocument,
-  deleteDocument
+  deleteDocument,
+  searchDocuments,
+  getStats
 };
