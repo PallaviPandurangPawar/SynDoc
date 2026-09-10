@@ -19,10 +19,15 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  const dbName = mongoose.connection.name || 'unknown';
+
   res.json({
     status: 'ok',
-    database: dbStatus,
-    uptime: process.uptime()
+    database: {
+      status: dbStatus,
+      name: dbName,
+    },
+    uptime: `${Math.floor(process.uptime())}s`,
   });
 });
 
