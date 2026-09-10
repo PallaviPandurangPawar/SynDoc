@@ -33,10 +33,23 @@ const deleteDocument = async (id) => {
   return !!result;
 };
 
+const searchDocumentsByTitle = async (query) => {
+  return await Document.find(
+    { $text: { $search: query } },
+    { score: { $meta: 'textScore' } }
+  ).sort({ score: { $meta: 'textScore' } });
+};
+
+const getDocumentCount = async () => {
+  return await Document.countDocuments();
+};
+
 module.exports = {
   getAllDocuments,
   getDocumentById,
   createDocument,
   updateDocument,
   deleteDocument,
+  searchDocumentsByTitle,
+  getDocumentCount,
 };
