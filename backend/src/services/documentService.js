@@ -8,15 +8,17 @@ const getDocumentById = async (id) => {
   return await Document.findById(id);
 };
 
-const createDocument = async ({ title, content = [] }) => {
-  const newDocument = new Document({
+const createDocument = async ({ title, content = [], ast }) => {
+  const docData = {
     title: title.trim(),
     content,
-  });
+  };
+  if (ast) docData.ast = ast;
+  const newDocument = new Document(docData);
   return await newDocument.save();
 };
 
-const updateDocument = async (id, { title, content }) => {
+const updateDocument = async (id, { title, content, ast }) => {
   const existingDoc = await Document.findById(id);
   if (!existingDoc) {
     return null;
@@ -24,6 +26,7 @@ const updateDocument = async (id, { title, content }) => {
 
   if (title !== undefined) existingDoc.title = title.trim();
   if (content !== undefined) existingDoc.content = content;
+  if (ast !== undefined) existingDoc.ast = ast;
 
   return await existingDoc.save();
 };
