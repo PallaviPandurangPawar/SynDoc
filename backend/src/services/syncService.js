@@ -30,7 +30,7 @@ async function persistNow(documentId) {
   try {
     const content = crdtService.getContentSnapshot(documentId);
     validateDocumentContent(content);
-    await documentService.updateDocument(documentId, { content });
+    await documentService.patchDocumentContent(documentId, content);
     console.log(`💾 [Sync] Persisted document ${documentId} to MongoDB`);
   } catch (error) {
     console.error(`❌ [Sync] Failed to persist document ${documentId}: ${error.message}`);
