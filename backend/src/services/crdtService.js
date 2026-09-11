@@ -65,10 +65,10 @@ function seedInitialContent(documentId, contentArray) {
   if (initializedDocs.has(documentId)) return;
 
   const yDoc = getYDoc(documentId);
-  const yText = yDoc.getText('content');
+  const yArray = yDoc.getArray('content');
 
-  if (yText.length === 0) {
-    yText.insert(0, JSON.stringify(contentArray || []));
+  if (yArray.length === 0 && Array.isArray(contentArray) && contentArray.length > 0) {
+    yArray.push(contentArray);
   }
 
   initializedDocs.add(documentId);
@@ -76,20 +76,15 @@ function seedInitialContent(documentId, contentArray) {
 }
 
 /**
- * Reads the current live content back out of a Y.Doc as a parsed AST array.
- * Returns an empty array if nothing has been seeded yet or parsing fails.
+ * Reads the current live content back out of a Y.Doc as a plain AST array.
+ * Using a Y.Array (rather than a JSON text blob) means concurrent edits from
+ * multiple clients merge safely — each node stays intact, even under heavy
+ * concurrent load, since Yjs never splits individual array elements.
  */
 function getContentSnapshot(documentId) {
   const yDoc = getYDoc(documentId);
-  const yText = yDoc.getText('content');
-
-  try {
-    const raw = yText.toString();
-    return raw ? JSON.parse(raw) : [];
-  } catch (error) {
-    console.error(`❌ [CRDT] Failed to parse content snapshot for ${documentId}: ${error.message}`);
-    return [];
-  }
+  const yArray = yDoc.getArray('content');
+  return yArray.toArray();
 }
 
 module.exports = {
