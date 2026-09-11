@@ -15,14 +15,9 @@ client.on('sync-init', (state) => {
 
   const localDoc = new Y.Doc();
   Y.applyUpdate(localDoc, new Uint8Array(state));
-  const yText = localDoc.getText('content');
+  const yArray = localDoc.getArray('content');
 
-  const currentContent = yText.toString();
-  const parsed = currentContent ? JSON.parse(currentContent) : [];
-  parsed.push({ type: 'paragraph', text: 'appended via CRDT test' });
-
-  yText.delete(0, yText.length);
-  yText.insert(0, JSON.stringify(parsed));
+  yArray.push([{ type: 'paragraph', text: 'appended via CRDT test' }]);
 
   const update = Array.from(Y.encodeStateAsUpdate(localDoc));
   console.log('✍️  Sending edit...');
