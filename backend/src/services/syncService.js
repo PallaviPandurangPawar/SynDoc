@@ -15,7 +15,11 @@ async function loadInitialState(documentId) {
 
   try {
     const document = await documentService.getDocumentById(documentId);
-    const content = document ? document.content : [];
+    // Convert Mongoose subdocuments to plain objects — Yjs can only store
+    // plain JSON-like data, not Mongoose document class instances.
+    const content = document
+      ? JSON.parse(JSON.stringify(document.content))
+      : [];
     crdtService.seedInitialContent(documentId, content);
   } catch (error) {
     console.error(`❌ [Sync] Failed to load initial state for ${documentId}: ${error.message}`);

@@ -1,7 +1,7 @@
 const { io } = require('socket.io-client');
 const Y = require('yjs');
 
-const DOC_ID = '6aa4592613bbc6116c144186'; // the _id from your earlier create request
+const DOC_ID = '6aa56a554d32f3c2b51d9b25'; // Clean Sync Test document
 
 const client = io('http://localhost:5000');
 
