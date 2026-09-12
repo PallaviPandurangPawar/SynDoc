@@ -1,5 +1,6 @@
 const { Server } = require('socket.io');
 const registerSyncHandlers = require('./syncHandler');
+const registerPresenceHandlers = require('./presenceHandler');
 
 const initSocket = (server) => {
   const io = new Server(server, {
@@ -13,6 +14,7 @@ const initSocket = (server) => {
     console.log(`🔌 [Socket.io] Client connected: ${socket.id}`);
 
     registerSyncHandlers(io, socket);
+    registerPresenceHandlers(io, socket);
 
     socket.on('disconnect', () => {
       console.log(`🔌 [Socket.io] Client disconnected: ${socket.id}`);

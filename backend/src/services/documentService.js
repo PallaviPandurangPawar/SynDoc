@@ -204,6 +204,20 @@ const removeCollaborator = async (id, userId) => {
 };
 
 /**
+ * Lightweight content update used by the CRDT auto-save path.
+ * Skips full document validation (we already validate the AST ourselves
+ * before calling this) to avoid a Mongoose bug that crashes on recursive
+ * subdocument schemas when replacing large content arrays via .save().
+ */
+const patchDocumentContent = async (id, content) => {
+  return await Document.findByIdAndUpdate(
+    id,
+    { $set: { content } },
+    { new: true, runValidators: false }
+  );
+};
+
+/**
  * Search documents by title (text index with regex fallback)
  */
 const searchDocumentsByTitle = async (query) => {
@@ -242,6 +256,7 @@ module.exports = {
   getDocumentHistory,
   addCollaborator,
   removeCollaborator,
+  patchDocumentContent,
   searchDocumentsByTitle,
   getDocumentCount
-};
+};
