@@ -59,4 +59,17 @@ function schedulePersist(documentId) {
   pendingSaves.set(documentId, timer);
 }
 
-module.exports = { loadInitialState, persistNow, schedulePersist };
+/**
+ * Cancels any pending debounced save for a document. Must be called before
+ * removing its Y.Doc from memory — otherwise a timer left over from an edit
+ * made right before disconnect can fire later, find an empty freshly-created
+ * Y.Doc, and overwrite the document's real saved content with nothing.
+ */
+function cancelPendingSave(documentId) {
+  if (pendingSaves.has(documentId)) {
+    clearTimeout(pendingSaves.get(documentId));
+    pendingSaves.delete(documentId);
+  }
+}
+
+module.exports = { loadInitialState, persistNow, schedulePersist, cancelPendingSave };

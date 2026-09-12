@@ -34,6 +34,24 @@ function registerSyncHandlers(io, socket) {
       syncService.schedulePersist(documentId);
     }
   });
+
+  // When this socket disconnects, check whether it was the last person
+  // editing its document — if so, save immediately and free the Y.Doc from
+  // memory, so long-running servers don't accumulate documents forever.
+  socket.on('disconnect', () => {
+    const documentId = socket.data.documentId;
+    if (!documentId) return;
+
+    const room = io.sockets.adapter.rooms.get(documentId);
+    const remainingUsers = room ? room.size : 0;
+
+    if (remainingUsers === 0) {
+      syncService.cancelPendingSave(documentId);
+      syncService.persistNow(documentId).finally(() => {
+        crdtService.removeYDoc(documentId);
+      });
+    }
+  });
 }
 
 module.exports = registerSyncHandlers;

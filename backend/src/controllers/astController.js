@@ -3,6 +3,20 @@ const { validateASTStructure } = require('../middlewares/validateAST');
 const crypto = require('crypto');
 
 /**
+ * Keeps `content` (the flat array used by the real-time CRDT layer) in sync
+ * with `ast.children` (the tree used by this structural node API), whenever
+ * a node is inserted, updated, deleted, or moved. Without this, a document
+ * edited through this API would silently diverge from what live collaborators
+ * see through the WebSocket/CRDT connection.
+ */
+function syncContentFromAst(document) {
+  if (document.ast && Array.isArray(document.ast.children)) {
+    document.content = document.ast.children;
+    document.markModified('content');
+  }
+}
+
+/**
  * Recursively find a node, its parent node, and its index among parent's children
  */
 function findNodeWithParent(root, targetId, parent = null, index = -1) {
@@ -160,6 +174,7 @@ const insertNode = async (req, res) => {
 
     if (lastModifiedBy) document.lastModifiedBy = lastModifiedBy;
     document.markModified('ast');
+    syncContentFromAst(document);
 
     const updatedDoc = await document.save();
 
@@ -232,6 +247,7 @@ const updateNode = async (req, res) => {
 
     if (lastModifiedBy) document.lastModifiedBy = lastModifiedBy;
     document.markModified('ast');
+    syncContentFromAst(document);
 
     const updatedDoc = await document.save();
 
@@ -289,6 +305,7 @@ const deleteNode = async (req, res) => {
 
     if (lastModifiedBy) document.lastModifiedBy = lastModifiedBy;
     document.markModified('ast');
+    syncContentFromAst(document);
 
     const updatedDoc = await document.save();
 
@@ -368,6 +385,7 @@ const moveNode = async (req, res) => {
 
     if (lastModifiedBy) document.lastModifiedBy = lastModifiedBy;
     document.markModified('ast');
+    syncContentFromAst(document);
 
     const updatedDoc = await document.save();
 
