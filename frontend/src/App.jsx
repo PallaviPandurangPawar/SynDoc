@@ -1,13 +1,20 @@
 // Root React component
 // TODO: implement
 
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { DocumentProvider } from './context/DocumentContext';
-import EditorCanvas from './components/Editor/EditorCanvas';
+import Dashboard from './pages/Dashboard';
+import DocumentPage from './pages/DocumentPage';
 
 function App() {
   return (
     <DocumentProvider>
-      <EditorCanvas />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/document/:id" element={<DocumentPage />} />
+        </Routes>
+      </BrowserRouter>
     </DocumentProvider>
   );
 }
