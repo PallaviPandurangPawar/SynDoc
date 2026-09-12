@@ -210,9 +210,12 @@ const removeCollaborator = async (id, userId) => {
  * subdocument schemas when replacing large content arrays via .save().
  */
 const patchDocumentContent = async (id, content) => {
+  // Also updates ast.children so real-time CRDT edits stay in sync with the
+  // AST tree used by the structural node-editing API — otherwise the two
+  // representations silently diverge and collaborators can lose each other's work.
   return await Document.findByIdAndUpdate(
     id,
-    { $set: { content } },
+    { $set: { content, 'ast.children': content } },
     { new: true, runValidators: false }
   );
 };
