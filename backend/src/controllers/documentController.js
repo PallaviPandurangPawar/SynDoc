@@ -1,9 +1,13 @@
+const mongoose = require('mongoose');
 const documentService = require('../services/documentService');
+const User = require('../models/User');
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 // Create a new document
 const createDocument = async (req, res) => {
   try {
-    const { title, content, ast } = req.body;
+    const { title, content, ast, owner, collaborators, lastModifiedBy } = req.body;
 
     if (!title || typeof title !== 'string' || title.trim() === '') {
       return res.status(400).json({
@@ -15,7 +19,10 @@ const createDocument = async (req, res) => {
     const newDocument = await documentService.createDocument({
       title,
       content,
-      ast
+      ast,
+      owner,
+      collaborators,
+      lastModifiedBy
     });
 
     return res.status(201).json({
@@ -31,15 +38,26 @@ const createDocument = async (req, res) => {
   }
 };
 
-// Get all documents
+// Get all documents with pagination & filtering
 const getDocuments = async (req, res) => {
   try {
-    const documents = await documentService.getAllDocuments();
+    const { page, limit, sortBy, order, search, owner, includeAST } = req.query;
+
+    const result = await documentService.getAllDocuments({
+      page,
+      limit,
+      sortBy,
+      order,
+      search,
+      owner,
+      includeAST
+    });
 
     return res.status(200).json({
       success: true,
       message: 'Documents fetched successfully',
-      data: documents
+      pagination: result.pagination,
+      data: result.documents
     });
   } catch (error) {
     return res.status(500).json({
@@ -53,6 +71,14 @@ const getDocuments = async (req, res) => {
 const getDocumentById = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document ID format'
+      });
+    }
+
     const document = await documentService.getDocumentById(id);
 
     if (!document) {
@@ -75,11 +101,19 @@ const getDocumentById = async (req, res) => {
   }
 };
 
-// Update document by ID
+// Update document by ID (PUT or PATCH)
 const updateDocument = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, ast } = req.body;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document ID format'
+      });
+    }
+
+    const { title, content, ast, lastModifiedBy, owner, collaborators } = req.body;
 
     if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
       return res.status(400).json({
@@ -91,7 +125,10 @@ const updateDocument = async (req, res) => {
     const updatedDoc = await documentService.updateDocument(id, {
       title,
       content,
-      ast
+      ast,
+      lastModifiedBy,
+      owner,
+      collaborators
     });
 
     if (!updatedDoc) {
@@ -118,6 +155,14 @@ const updateDocument = async (req, res) => {
 const deleteDocument = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document ID format'
+      });
+    }
+
     const isDeleted = await documentService.deleteDocument(id);
 
     if (!isDeleted) {
@@ -130,6 +175,171 @@ const deleteDocument = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Document deleted successfully'
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// Duplicate / clone document by ID
+const duplicateDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document ID format'
+      });
+    }
+
+    const { title, lastModifiedBy, owner } = req.body;
+
+    const clonedDoc = await documentService.duplicateDocument(id, {
+      title,
+      lastModifiedBy,
+      owner
+    });
+
+    if (!clonedDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Original document not found'
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Document duplicated successfully',
+      data: clonedDoc
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// Get document change / version history
+const getDocumentHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document ID format'
+      });
+    }
+
+    const historyData = await documentService.getDocumentHistory(id);
+
+    if (!historyData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Document history retrieved successfully',
+      data: historyData
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// Add collaborator to document
+const addCollaborator = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document ID format'
+      });
+    }
+
+    if (!userId || !isValidObjectId(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid userId is required'
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User to add as collaborator not found'
+      });
+    }
+
+    const updatedDoc = await documentService.addCollaborator(id, userId);
+
+    if (!updatedDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Collaborator added successfully',
+      data: updatedDoc
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// Remove collaborator from document
+const removeCollaborator = async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document ID format'
+      });
+    }
+
+    if (!userId || !isValidObjectId(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid userId is required'
+      });
+    }
+
+    const updatedDoc = await documentService.removeCollaborator(id, userId);
+
+    if (!updatedDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Collaborator removed successfully',
+      data: updatedDoc
     });
   } catch (error) {
     return res.status(500).json({
@@ -191,6 +401,11 @@ module.exports = {
   getDocumentById,
   updateDocument,
   deleteDocument,
+  duplicateDocument,
+  getDocumentHistory,
+  addCollaborator,
+  removeCollaborator,
   searchDocuments,
   getStats
 };
+

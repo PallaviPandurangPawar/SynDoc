@@ -136,19 +136,27 @@ function validateASTStructure(node, depth = 1, seenIds = new Set(), maxDepth = 5
  * Express Middleware for pre-save AST structural validation on requests
  */
 const validateAST = (req, res, next) => {
-  const { ast } = req.body;
+  const { ast, content } = req.body;
 
-  // If request does not provide an AST, allow it through (optional payload)
-  if (ast === undefined || ast === null) {
-    return next();
+  if (ast !== undefined && ast !== null) {
+    const validation = validateASTStructure(ast);
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: `AST Validation Error: ${validation.error}`
+      });
+    }
   }
 
-  const validation = validateASTStructure(ast);
-  if (!validation.valid) {
-    return res.status(400).json({
-      success: false,
-      message: `AST Validation Error: ${validation.error}`
-    });
+  if (content !== undefined && content !== null) {
+    try {
+      validateDocumentContent(content);
+    } catch (err) {
+      return res.status(400).json({
+        success: false,
+        message: `Content Validation Error: ${err.message}`
+      });
+    }
   }
 
   next();
