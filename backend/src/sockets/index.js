@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const registerSyncHandlers = require('./syncHandler');
 const registerPresenceHandlers = require('./presenceHandler');
+const { initWebSocket, getYDocs } = require('./websocket');
 
 const initSocket = (server) => {
   const io = new Server(server, {
@@ -21,8 +22,19 @@ const initSocket = (server) => {
     });
   });
 
+  // Initialize WebSocket / y-websocket server on the same HTTP server
+  const wss = initWebSocket(server, io);
+  io.wss = wss;
+
+  console.log(`⚡ [Realtime] Socket.io and WebSocket (y-websocket) initialized`);
+
   return io;
 };
 
+initSocket.initSocket = initSocket;
+initSocket.initWebSocket = initWebSocket;
+initSocket.getYDocs = getYDocs;
+
 module.exports = initSocket;
+
 
