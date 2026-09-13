@@ -6,6 +6,12 @@ const presenceService = require('../services/presenceService');
 function registerPresenceHandlers(io, socket) {
   // Client announces they've joined a document with optional user info (name/color)
   socket.on('presence-join', ({ documentId, name, color }) => {
+    if (!documentId) return;
+
+    // Ensure socket is joined to room and has documentId saved
+    socket.join(documentId);
+    socket.data.documentId = documentId;
+
     presenceService.addUser(documentId, socket.id, { name, color });
 
     // Tell everyone else in the room who's now active
@@ -17,11 +23,26 @@ function registerPresenceHandlers(io, socket) {
 
   // Client moves their cursor/selection
   socket.on('presence-cursor', ({ documentId, cursor }) => {
-    presenceService.updateCursor(documentId, socket.id, cursor);
+    const targetDocId = documentId || socket.data.documentId;
+    if (!targetDocId) return;
 
-    const activeUsers = presenceService.getActiveUsers(documentId);
+    presenceService.updateCursor(targetDocId, socket.id, cursor);
+
+    const activeUsers = presenceService.getActiveUsers(targetDocId);
     // Broadcast to everyone else (not back to the sender)
-    socket.to(documentId).emit('presence-update', activeUsers);
+    socket.to(targetDocId).emit('presence-update', activeUsers);
+  });
+
+  // Client explicitly leaves presence for a document
+  socket.on('presence-leave', ({ documentId } = {}) => {
+    const targetDocId = documentId || socket.data.documentId;
+    if (!targetDocId) return;
+
+    presenceService.removeUser(targetDocId, socket.id);
+    const activeUsers = presenceService.getActiveUsers(targetDocId);
+    io.to(targetDocId).emit('presence-update', activeUsers);
+
+    console.log(`👋 [Presence] Socket ${socket.id} left presence for document: ${targetDocId}`);
   });
 
   // Clean up when this socket disconnects entirely
@@ -38,3 +59,4 @@ function registerPresenceHandlers(io, socket) {
 }
 
 module.exports = registerPresenceHandlers;
+

@@ -16,7 +16,9 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`=========================================`);
       console.log(`🚀 SyncDoc Backend running on port ${PORT}`);
-      console.log(`📡 URL: http://localhost:${PORT}`);
+      console.log(`📡 HTTP: http://localhost:${PORT}`);
+      console.log(`🔌 Socket.io: http://localhost:${PORT}/socket.io/`);
+      console.log(`⚡ WebSocket (Yjs): ws://localhost:${PORT}`);
       console.log(`🩺 Health: http://localhost:${PORT}/health`);
       console.log(`=========================================`);
     });
