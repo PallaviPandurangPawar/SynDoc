@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const documentService = require('../services/documentService');
 const User = require('../models/User');
+const lockService = require('../services/lockService');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -395,6 +396,25 @@ const getStats = async (req, res) => {
   }
 };
 
+// Get currently active block locks for a document
+const getDocumentLocks = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const locks = lockService.getLocks(id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Active locks fetched successfully',
+      data: locks
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
 module.exports = {
   createDocument,
   getDocuments,
@@ -406,6 +426,7 @@ module.exports = {
   addCollaborator,
   removeCollaborator,
   searchDocuments,
-  getStats
+  getStats,
+  getDocumentLocks
 };
 
