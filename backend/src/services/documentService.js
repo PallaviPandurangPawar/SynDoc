@@ -58,7 +58,7 @@ const getAllDocuments = async (options = {}) => {
  * Get a single document by its ID
  */
 const getDocumentById = async (id) => {
-  return await Document.findById(id)
+  return Document.findById(id)
     .populate('owner', 'name email')
     .populate('collaborators', 'name email');
 };
