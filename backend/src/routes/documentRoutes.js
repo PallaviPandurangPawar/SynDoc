@@ -11,7 +11,8 @@ const {
   addCollaborator,
   removeCollaborator,
   searchDocuments,
-  getStats
+  getStats,
+  getDocumentLocks
 } = require('../controllers/documentController');
 const { validateAST } = require('../middlewares/validateAST');
 
@@ -32,6 +33,9 @@ router.post('/:id/duplicate', duplicateDocument);
 router.get('/:id/history', getDocumentHistory);
 router.post('/:id/collaborators', addCollaborator);
 router.delete('/:id/collaborators/:userId', removeCollaborator);
+
+// Real-time block-locking status
+router.get('/:id/locks', getDocumentLocks);
 
 // Nested AST & structural manipulation routes
 const astRoutes = require('./astRoutes');

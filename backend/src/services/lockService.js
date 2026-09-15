@@ -1,6 +1,10 @@
 // Holds a Map of documentId -> Map of nodeId -> lock info
 const activeLocks = new Map();
 
+// Locks auto-expire after this many milliseconds of inactivity, in case a
+// disconnect event is ever missed (e.g. abrupt network loss).
+const LOCK_TIMEOUT_MS = 30000;
+
 /**
  * Attempts to lock a block (AST node) for exclusive editing by one user.
  * Returns { success: true } if the lock was acquired, or
@@ -13,9 +17,16 @@ function acquireLock(documentId, nodeId, socketId, userName) {
 
   const docLocks = activeLocks.get(documentId);
   const existing = docLocks.get(nodeId);
+  const now = Date.now();
 
-  if (existing && existing.socketId !== socketId) {
-    return { success: false, lockedBy: existing.userName };
+  // Treat an expired lock as if it doesn't exist, so a new user can claim it
+  if (existing && now - existing.lockedAt.getTime() > LOCK_TIMEOUT_MS) {
+    docLocks.delete(nodeId);
+  }
+
+  const current = docLocks.get(nodeId);
+  if (current && current.socketId !== socketId) {
+    return { success: false, lockedBy: current.userName };
   }
 
   docLocks.set(nodeId, { socketId, userName: userName || 'Anonymous', lockedAt: new Date() });

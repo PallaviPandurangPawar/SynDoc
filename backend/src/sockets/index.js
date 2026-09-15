@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const registerSyncHandlers = require('./syncHandler');
 const registerPresenceHandlers = require('./presenceHandler');
+const registerLockHandlers = require('./lockHandler');
 const { initWebSocket, getYDocs } = require('./websocket');
 
 const initSocket = (server) => {
@@ -16,6 +17,7 @@ const initSocket = (server) => {
 
     registerSyncHandlers(io, socket);
     registerPresenceHandlers(io, socket);
+    registerLockHandlers(io, socket);
 
     socket.on('disconnect', () => {
       console.log(`🔌 [Socket.io] Client disconnected: ${socket.id}`);
