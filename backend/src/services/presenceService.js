@@ -13,6 +13,7 @@ function addUser(documentId, socketId, userInfo = {}) {
     name: userInfo.name || 'Anonymous',
     color: userInfo.color || '#4A90D9',
     cursor: null,
+    lockedBlockId: null,
     joinedAt: new Date(),
   });
 }
@@ -24,6 +25,16 @@ function updateCursor(documentId, socketId, cursor) {
   const docPresence = activePresence.get(documentId);
   if (!docPresence || !docPresence.has(socketId)) return;
   docPresence.get(socketId).cursor = cursor;
+}
+
+/**
+ * Records which block (if any) a user currently holds an editing lock on,
+ * so presence data (used for cursors/avatars in the UI) also reflects locks.
+ */
+function updateLockedBlock(documentId, socketId, nodeId) {
+  const docPresence = activePresence.get(documentId);
+  if (!docPresence || !docPresence.has(socketId)) return;
+  docPresence.get(socketId).lockedBlockId = nodeId;
 }
 
 /**
@@ -46,4 +57,4 @@ function getActiveUsers(documentId) {
   return docPresence ? Array.from(docPresence.values()) : [];
 }
 
-module.exports = { addUser, updateCursor, removeUser, getActiveUsers };
+module.exports = { addUser, updateCursor, removeUser, getActiveUsers, updateLockedBlock };
