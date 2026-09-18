@@ -1,5 +1,10 @@
 const presenceService = require('../services/presenceService');
 
+// Tracks the last time each socket's cursor update was actually broadcast,
+// so rapid cursor movement (e.g. every keystroke) doesn't flood the network.
+const lastCursorBroadcast = new Map();
+const CURSOR_THROTTLE_MS = 50; // at most ~20 broadcasts/sec per user
+
 /**
  * Registers all presence-related event listeners for a single connected socket.
  */
@@ -26,7 +31,16 @@ function registerPresenceHandlers(io, socket) {
     const targetDocId = documentId || socket.data.documentId;
     if (!targetDocId) return;
 
+    // Always record the latest position internally, so a late-joining
+    // user still sees the correct current cursor via presence-update.
     presenceService.updateCursor(targetDocId, socket.id, cursor);
+
+    // But only broadcast to other clients at most every CURSOR_THROTTLE_MS,
+    // so rapid typing doesn't flood the network with dozens of updates/sec.
+    const now = Date.now();
+    const lastSent = lastCursorBroadcast.get(socket.id) || 0;
+    if (now - lastSent < CURSOR_THROTTLE_MS) return;
+    lastCursorBroadcast.set(socket.id, now);
 
     const activeUsers = presenceService.getActiveUsers(targetDocId);
     // Broadcast to everyone else (not back to the sender)
@@ -47,6 +61,8 @@ function registerPresenceHandlers(io, socket) {
 
   // Clean up when this socket disconnects entirely
   socket.on('disconnect', () => {
+    lastCursorBroadcast.delete(socket.id);
+
     const documentId = socket.data.documentId;
     if (!documentId) return;
 
