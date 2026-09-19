@@ -1,47 +1,103 @@
+const Document = require('../models/Document');
 const { astToHtml } = require('../utils/astToHtml');
-const { sanitizeHtml } = require('../middlewares/sanitize');
 const { htmlToPdf } = require('../utils/htmlToPdf');
-const documentService = require('./documentService');
 
 /**
- * Fetches a document by ID and converts its AST content into sanitized HTML.
- * @param {string} documentId
- * @returns {Promise<{ title: string, html: string }>}
+ * Converts an in-memory AST directly into a styled, sanitized HTML document string.
+ *
+ * @param {Object} ast - AST root node or children array
+ * @param {Object} [options={}] - Options (title, author, lastModified, etc.)
+ * @returns {string} HTML string
  */
-async function exportAsHtml(documentId) {
-  const document = await documentService.getDocumentById(documentId);
+function convertAstToHtml(ast, options = {}) {
+  return astToHtml(ast, options);
+}
 
-  if (!document) {
-    const error = new Error('Document not found');
-    error.statusCode = 404;
+/**
+ * Converts an in-memory AST directly into a PDF binary buffer.
+ *
+ * @param {Object} ast - AST root node or children array
+ * @param {Object} [options={}] - PDF options (format, margins, title, etc.)
+ * @returns {Promise<Buffer>} PDF buffer
+ */
+async function convertAstToPdf(ast, options = {}) {
+  const html = astToHtml(ast, options);
+  return await htmlToPdf(html, options);
+}
+
+/**
+ * Loads a document by ID from MongoDB and exports its AST as styled HTML.
+ *
+ * @param {string} documentId - MongoDB Document ObjectId or string
+ * @param {Object} [options={}] - Export options
+ * @returns {Promise<{ html: string, title: string, document: Object }>}
+ */
+async function exportDocumentAsHtml(documentId, options = {}) {
+  const doc = await Document.findById(documentId);
+  if (!doc) {
+    const error = new Error(`Document with ID "${documentId}" not found`);
+    error.status = 404;
     throw error;
   }
 
-  // Prefer the flat content array (kept in sync with ast.children by the CRDT layer)
-  const contentToRender =
-    Array.isArray(document.content) && document.content.length > 0
-      ? document.content
-      : document.ast;
+  const exportOptions = {
+    title: doc.title || 'Untitled Document',
+    author: doc.lastModifiedBy || 'SynDoc User',
+    lastModified: doc.updatedAt || doc.createdAt,
+    ...options
+  };
 
-  const rawHtml = astToHtml(contentToRender);
-  const cleanHtml = sanitizeHtml(rawHtml);
-
+  const html = astToHtml(doc.ast, exportOptions);
   return {
-    title: document.title,
-    html: cleanHtml,
+    html,
+    title: exportOptions.title,
+    document: doc
   };
 }
 
 /**
- * Fetches a document by ID and converts its AST content all the way into a PDF buffer.
- * @param {string} documentId
- * @returns {Promise<{ title: string, pdfBuffer: Buffer }>}
+ * Loads a document by ID from MongoDB, transforms its AST to HTML, and prints a PDF buffer.
+ *
+ * @param {string} documentId - MongoDB Document ObjectId or string
+ * @param {Object} [options={}] - Export options
+ * @returns {Promise<{ pdfBuffer: Buffer, filename: string, title: string, document: Object }>}
  */
-async function exportAsPdf(documentId) {
-  const { title, html } = await exportAsHtml(documentId);
-  const pdfBuffer = await htmlToPdf(html);
+async function exportDocumentAsPdf(documentId, options = {}) {
+  const doc = await Document.findById(documentId);
+  if (!doc) {
+    const error = new Error(`Document with ID "${documentId}" not found`);
+    error.status = 404;
+    throw error;
+  }
 
-  return { title, pdfBuffer };
+  const title = doc.title || 'Untitled Document';
+  const exportOptions = {
+    title,
+    author: doc.lastModifiedBy || 'SynDoc User',
+    lastModified: doc.updatedAt || doc.createdAt,
+    ...options
+  };
+
+  const html = astToHtml(doc.ast, exportOptions);
+  const pdfBuffer = await htmlToPdf(html, exportOptions);
+
+  const sanitizedTitle = title
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '_');
+  const filename = `${sanitizedTitle || 'document'}_export.pdf`;
+
+  return {
+    pdfBuffer,
+    filename,
+    title,
+    document: doc
+  };
 }
 
-module.exports = { exportAsHtml, exportAsPdf };
+module.exports = {
+  convertAstToHtml,
+  convertAstToPdf,
+  exportDocumentAsHtml,
+  exportDocumentAsPdf
+};

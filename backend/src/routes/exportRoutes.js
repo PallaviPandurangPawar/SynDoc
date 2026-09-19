@@ -1,11 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const { exportHtml, exportPdf } = require('../controllers/exportController');
+const {
+  exportDocumentPdf,
+  exportDocumentHtml,
+  convertAstToPdf,
+  convertAstToHtml
+} = require('../controllers/exportController');
 
-// GET /api/export/:id/html — view the document as a web page
-router.get('/:id/html', exportHtml);
+// Direct AST payload transformation endpoints
+router.post('/pdf', convertAstToPdf);
+router.post('/html', convertAstToHtml);
 
-// GET /api/export/:id/pdf — download the document as a PDF file
-router.get('/:id/pdf', exportPdf);
+// Stored Document export endpoints
+router.get('/documents/:id/pdf', exportDocumentPdf);
+router.get('/documents/:id/html', exportDocumentHtml);
 
 module.exports = router;
