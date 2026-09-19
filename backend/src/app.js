@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const documentRoutes = require('./routes/documentRoutes');
+const exportRoutes = require('./routes/exportRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
@@ -32,6 +33,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/documents', documentRoutes);
+app.use('/api/export', exportRoutes);
 
 // 404 Handler
 app.use((req, res) => {
