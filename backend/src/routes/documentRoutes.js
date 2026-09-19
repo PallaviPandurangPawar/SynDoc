@@ -41,5 +41,10 @@ router.get('/:id/locks', getDocumentLocks);
 const astRoutes = require('./astRoutes');
 router.use('/:id/ast', astRoutes);
 
+// Document export endpoints
+const { exportDocumentPdf, exportDocumentHtml } = require('../controllers/exportController');
+router.get('/:id/export/pdf', exportDocumentPdf);
+router.get('/:id/export/html', exportDocumentHtml);
+
 module.exports = router;
 
