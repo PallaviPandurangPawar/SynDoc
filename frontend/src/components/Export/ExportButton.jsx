@@ -1,6 +1,4 @@
 // Trigger PDF/HTML export
-// TODO: implement
-
 import { useState } from 'react';
 import axios from 'axios';
 
@@ -10,7 +8,7 @@ export default function ExportButton({ documentId }) {
   const handleExport = async (format) => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:5000/api/export/${documentId}?format=${format}`, { responseType: 'blob' });
+      const response = await axios.get(`http://localhost:5000/api/export/documents/${documentId}/${format}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -19,7 +17,7 @@ export default function ExportButton({ documentId }) {
       link.click();
       link.remove();
     } catch {
-      alert('Export failed — the backend export endpoint isn\'t built yet.');
+      alert('Export failed. Please check that the backend server is running.');
     } finally {
       setLoading(false);
     }
