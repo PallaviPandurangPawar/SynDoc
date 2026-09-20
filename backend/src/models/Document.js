@@ -291,6 +291,14 @@ const DocumentSchema = new mongoose.Schema(
         ref: 'User'
       }
     ],
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date,
+      default: null
+    },
     content: {
       type: [ASTNodeSchema], // Document body as an array of top-level AST nodes
       default: []
