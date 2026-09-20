@@ -9,13 +9,19 @@ import Block from './Block';
 import UserList from '../Presence/UserList';
 import CursorOverlay from '../Presence/CursorOverlay';
 
-export default function EditorCanvas({ documentId }) 
+export default function EditorCanvas({ documentId })
 {
   const { socket, connected } = useSocket();
   const { content, addBlock, updateBlock, removeBlock } = useYjsSync(socket, documentId);
   const { activeUsers, updateCursor } = usePresence(socket, documentId, 'You');
 
-  const handleAddBlock = (type) => addBlock({ nodeId: crypto.randomUUID(), type, content: '' });
+  const handleAddBlock = (type) => {
+  const newBlock = { nodeId: crypto.randomUUID(), type, content: '' };
+  if (type === 'heading') {
+    newBlock.attributes = { level: 1 };
+  }
+  addBlock(newBlock);
+};
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '16px' }}>
