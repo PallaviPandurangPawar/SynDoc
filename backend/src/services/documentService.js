@@ -15,7 +15,7 @@ const getAllDocuments = async (options = {}) => {
     includeAST = false
   } = options;
 
-  const queryObj = {};
+  const queryObj = { isDeleted: { $ne: true } };
 
   if (search && search.trim() !== '') {
     queryObj.title = { $regex: search.trim(), $options: 'i' };
@@ -58,7 +58,7 @@ const getAllDocuments = async (options = {}) => {
  * Get a single document by its ID
  */
 const getDocumentById = async (id) => {
-  return Document.findById(id)
+  return Document.findOne({ _id: id, isDeleted: { $ne: true } })
     .populate('owner', 'name email')
     .populate('collaborators', 'name email');
 };
@@ -110,10 +110,14 @@ const updateDocument = async (id, updateFields = {}) => {
 };
 
 /**
- * Delete a document by ID
+ * Soft-delete a document by ID (marks it deleted instead of removing it,
+ * so it can be recovered later and its history isn't lost)
  */
 const deleteDocument = async (id) => {
-  const result = await Document.findByIdAndDelete(id);
+  const result = await Document.findByIdAndUpdate(id, {
+    isDeleted: true,
+    deletedAt: new Date()
+  });
   return !!result;
 };
 

@@ -114,7 +114,23 @@ const updateDocument = async (req, res) => {
       });
     }
 
-    const { title, content, ast, lastModifiedBy, owner, collaborators } = req.body;
+    const { title, content, ast, lastModifiedBy, owner, collaborators, requesterId } = req.body;
+
+    // Ownership check: only enforced if the document already has an owner assigned.
+    // Documents with no owner (e.g. anonymous test docs) remain open, unchanged from before.
+    const existingDoc = await documentService.getDocumentById(id);
+    if (!existingDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+    if (existingDoc.owner && (!requesterId || existingDoc.owner._id.toString() !== requesterId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to edit this document'
+      });
+    }
 
     if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
       return res.status(400).json({
@@ -161,6 +177,23 @@ const deleteDocument = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Invalid document ID format'
+      });
+    }
+
+    const { requesterId } = req.body;
+
+    // Ownership check: only enforced if the document already has an owner assigned.
+    const existingDoc = await documentService.getDocumentById(id);
+    if (!existingDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found'
+      });
+    }
+    if (existingDoc.owner && (!requesterId || existingDoc.owner._id.toString() !== requesterId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to delete this document'
       });
     }
 
