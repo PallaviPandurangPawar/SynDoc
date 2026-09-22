@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getDocuments, createDocument } from '../services/api';
+import { getDocuments, createDocument, deleteDocument } from '../services/api';
 
 export default function Dashboard() {
   const [documents, setDocuments] = useState([]);
@@ -13,7 +13,7 @@ export default function Dashboard() {
 
   useEffect(() => { loadDocuments(); }, []);
 
-  const loadDocuments = async () => 
+  const loadDocuments = async () =>
   {
     try {
       setLoading(true);
@@ -26,7 +26,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleCreate = async () => 
+  const handleCreate = async () =>
     {
     const title = window.prompt('Document title:');
     if (!title) return;
@@ -35,6 +35,17 @@ export default function Dashboard() {
       navigate(`/document/${res.data._id}`);
     } catch {
       alert('Failed to create document.');
+    }
+  };
+
+  const handleDelete = async (id, title) => {
+    const confirmed = window.confirm(`Delete "${title}"? This cannot be undone from the app.`);
+    if (!confirmed) return;
+    try {
+      await deleteDocument(id);
+      setDocuments((prev) => prev.filter((doc) => doc._id !== id));
+    } catch {
+      alert('Failed to delete document.');
     }
   };
 
@@ -52,8 +63,9 @@ export default function Dashboard() {
       ) : (
         <ul style={{ listStyle: 'none', padding: 0 }}>
           {documents.map((doc) => (
-            <li key={doc._id} style={{ padding: '12px 0', borderBottom: '1px solid #eee' }}>
+            <li key={doc._id} style={{ padding: '12px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Link to={`/document/${doc._id}`}>{doc.title}</Link>
+              <button onClick={() => handleDelete(doc._id, doc.title)} style={{ color: 'red' }}>Delete</button>
             </li>
           ))}
         </ul>
