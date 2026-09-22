@@ -8,7 +8,7 @@ const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 // Create a new document
 const createDocument = async (req, res) => {
   try {
-    const { title, content, ast, owner, collaborators, lastModifiedBy } = req.body;
+    const { title, content, ast, collaborators } = req.body;
 
     if (!title || typeof title !== 'string' || title.trim() === '') {
       return res.status(400).json({
@@ -21,9 +21,9 @@ const createDocument = async (req, res) => {
       title,
       content,
       ast,
-      owner,
+      owner: req.user._id,
       collaborators,
-      lastModifiedBy
+      lastModifiedBy: req.user.name
     });
 
     return res.status(201).json({
@@ -114,7 +114,7 @@ const updateDocument = async (req, res) => {
       });
     }
 
-    const { title, content, ast, lastModifiedBy, owner, collaborators, requesterId } = req.body;
+    const { title, content, ast, owner, collaborators } = req.body;
 
     // Ownership check: only enforced if the document already has an owner assigned.
     // Documents with no owner (e.g. anonymous test docs) remain open, unchanged from before.
@@ -125,7 +125,7 @@ const updateDocument = async (req, res) => {
         message: 'Document not found'
       });
     }
-    if (existingDoc.owner && (!requesterId || existingDoc.owner._id.toString() !== requesterId)) {
+    if (existingDoc.owner && existingDoc.owner._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to edit this document'
@@ -143,7 +143,7 @@ const updateDocument = async (req, res) => {
       title,
       content,
       ast,
-      lastModifiedBy,
+      lastModifiedBy: req.user.name,
       owner,
       collaborators
     });
@@ -180,8 +180,6 @@ const deleteDocument = async (req, res) => {
       });
     }
 
-    const { requesterId } = req.body;
-
     // Ownership check: only enforced if the document already has an owner assigned.
     const existingDoc = await documentService.getDocumentById(id);
     if (!existingDoc) {
@@ -190,7 +188,7 @@ const deleteDocument = async (req, res) => {
         message: 'Document not found'
       });
     }
-    if (existingDoc.owner && (!requesterId || existingDoc.owner._id.toString() !== requesterId)) {
+    if (existingDoc.owner && existingDoc.owner._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to delete this document'
