@@ -15,18 +15,19 @@ const {
   getDocumentLocks
 } = require('../controllers/documentController');
 const { validateAST } = require('../middlewares/validateAST');
+const { protect } = require('../middlewares/auth');
 
 // Global document routes
 router.get('/', getDocuments);
-router.post('/', validateAST, createDocument);
+router.post('/', protect, validateAST, createDocument);
 router.get('/search', searchDocuments);
 router.get('/stats', getStats);
 
 // Single document operations
 router.get('/:id', getDocumentById);
-router.put('/:id', validateAST, updateDocument);
-router.patch('/:id', validateAST, updateDocument);
-router.delete('/:id', deleteDocument);
+router.put('/:id', protect, validateAST, updateDocument);
+router.patch('/:id', protect, validateAST, updateDocument);
+router.delete('/:id', protect, deleteDocument);
 
 // Document lifecycle & collaboration
 router.post('/:id/duplicate', duplicateDocument);
