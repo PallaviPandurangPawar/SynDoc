@@ -4,6 +4,7 @@
 import { useSocket } from '../../hooks/useSocket';
 import { useYjsSync } from '../../hooks/useYjsSync';
 import { usePresence } from '../../hooks/usePresence';
+import { useLocks } from '../../hooks/useLocks';
 import Toolbar from './Toolbar';
 import Block from './Block';
 import UserList from '../Presence/UserList';
@@ -14,6 +15,7 @@ export default function EditorCanvas({ documentId })
   const { socket, connected } = useSocket();
   const { content, addBlock, updateBlock, removeBlock } = useYjsSync(socket, documentId);
   const { activeUsers, updateCursor } = usePresence(socket, documentId, 'You');
+  const { lockBlock, unlockBlock, isLockedByOther, getLockOwner } = useLocks(socket, documentId, 'You');
 
   const handleAddBlock = (type) => {
   const newBlock = { nodeId: crypto.randomUUID(), type, content: '' };
@@ -31,14 +33,31 @@ export default function EditorCanvas({ documentId })
       <UserList users={activeUsers} />
       <Toolbar onAddBlock={handleAddBlock} />
       {content.length === 0 && <p style={{ color: '#999' }}>No blocks yet — add one above.</p>}
-      {content.map((block, index) => (
-        <div key={block.nodeId || index}>
-          <CursorOverlay users={activeUsers} blockIndex={index} />
-          <div onFocus={() => updateCursor({ blockIndex: index })}>
-            <Block block={block} onChange={(updated) => updateBlock(index, updated)} onDelete={() => removeBlock(index)} />
+      {content.map((block, index) => {
+        const lockedByOther = isLockedByOther(block.nodeId);
+        const lockOwner = getLockOwner(block.nodeId);
+        return (
+          <div key={block.nodeId || index}>
+            <CursorOverlay users={activeUsers} blockIndex={index} />
+            {lockedByOther && (
+              <div style={{ fontSize: '11px', color: '#c0392b', marginBottom: '2px' }}>
+                🔒 Locked by {lockOwner}
+              </div>
+            )}
+            <div
+              onFocus={() => { updateCursor({ blockIndex: index }); lockBlock(block.nodeId); }}
+              onBlur={() => unlockBlock(block.nodeId)}
+            >
+              <Block
+                block={block}
+                onChange={(updated) => updateBlock(index, updated)}
+                onDelete={() => removeBlock(index)}
+                disabled={lockedByOther}
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
