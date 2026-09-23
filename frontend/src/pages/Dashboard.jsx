@@ -4,12 +4,19 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getDocuments, createDocument, deleteDocument } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function Dashboard() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   useEffect(() => { loadDocuments(); }, []);
 
@@ -56,7 +63,11 @@ export default function Dashboard() {
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>SyncDoc</h1>
-        <button onClick={handleCreate}>+ New Document</button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ fontSize: '14px', color: '#555' }}>{user?.name}</span>
+          <button onClick={handleCreate}>+ New Document</button>
+          <button onClick={handleLogout}>Log Out</button>
+        </div>
       </div>
       {documents.length === 0 ? (
         <p>No documents yet. Create one to get started.</p>

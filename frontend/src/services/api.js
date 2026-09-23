@@ -8,10 +8,22 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// Attach the logged-in user's token to every outgoing request, if one exists
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('syncdoc_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const getDocuments = async () => (await api.get('/documents')).data;
 export const getDocumentById = async (id) => (await api.get(`/documents/${id}`)).data;
 export const createDocument = async ({ title, content, ast }) => (await api.post('/documents', { title, content, ast })).data;
 export const updateDocument = async (id, { title, content, ast }) => (await api.put(`/documents/${id}`, { title, content, ast })).data;
 export const deleteDocument = async (id) => (await api.delete(`/documents/${id}`)).data;
+
+export const registerUser = async ({ name, email, password }) => (await api.post('/auth/register', { name, email, password })).data;
+export const loginUser = async ({ email, password }) => (await api.post('/auth/login', { email, password })).data;
 
 export default api;
