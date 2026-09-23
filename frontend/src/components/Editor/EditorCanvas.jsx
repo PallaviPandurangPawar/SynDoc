@@ -5,6 +5,7 @@ import { useSocket } from '../../hooks/useSocket';
 import { useYjsSync } from '../../hooks/useYjsSync';
 import { usePresence } from '../../hooks/usePresence';
 import { useLocks } from '../../hooks/useLocks';
+import { useAuth } from '../../context/AuthContext';
 import Toolbar from './Toolbar';
 import Block from './Block';
 import UserList from '../Presence/UserList';
@@ -13,9 +14,10 @@ import CursorOverlay from '../Presence/CursorOverlay';
 export default function EditorCanvas({ documentId })
 {
   const { socket, connected } = useSocket();
+  const { user } = useAuth();
   const { content, addBlock, updateBlock, removeBlock } = useYjsSync(socket, documentId);
-  const { activeUsers, updateCursor } = usePresence(socket, documentId, 'You');
-  const { lockBlock, unlockBlock, isLockedByOther, getLockOwner } = useLocks(socket, documentId, 'You');
+  const { activeUsers, updateCursor } = usePresence(socket, documentId, user?.name || 'Anonymous');
+  const { lockBlock, unlockBlock, isLockedByOther, getLockOwner } = useLocks(socket, documentId, user?.name || 'Anonymous');
 
   const handleAddBlock = (type) => {
   const newBlock = { nodeId: crypto.randomUUID(), type, content: '' };
