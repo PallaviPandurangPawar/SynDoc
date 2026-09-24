@@ -1,6 +1,7 @@
 const Document = require('../models/Document');
 const { astToHtml } = require('../utils/astToHtml');
 const { htmlToPdf } = require('../utils/htmlToPdf');
+const { markdownToAst, astToMarkdown } = require('../utils/markdownToAst');
 
 /**
  * Converts an in-memory AST directly into a styled, sanitized HTML document string.
@@ -23,6 +24,17 @@ function convertAstToHtml(ast, options = {}) {
 async function convertAstToPdf(ast, options = {}) {
   const html = astToHtml(ast, options);
   return await htmlToPdf(html, options);
+}
+
+/**
+ * Parses a raw Markdown string into a SynDoc AST tree.
+ * No database interaction — pure in-memory transformation.
+ *
+ * @param {string} markdown - Raw Markdown string
+ * @returns {Object} Root ASTNode
+ */
+function convertMarkdownToAst(markdown) {
+  return markdownToAst(markdown || '');
 }
 
 /**
@@ -95,9 +107,38 @@ async function exportDocumentAsPdf(documentId, options = {}) {
   };
 }
 
+/**
+ * Loads a document by ID from MongoDB and exports its AST as plain Markdown text.
+ *
+ * @param {string} documentId - MongoDB Document ObjectId or string
+ * @returns {Promise<{ markdown: string, filename: string, title: string }>}
+ */
+async function exportDocumentAsMarkdown(documentId) {
+  const doc = await Document.findById(documentId);
+  if (!doc) {
+    const error = new Error(`Document with ID "${documentId}" not found`);
+    error.status = 404;
+    throw error;
+  }
+
+  const title = doc.title || 'Untitled Document';
+  const markdown = astToMarkdown(doc.ast);
+
+  const sanitizedTitle = title
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '_');
+  const filename = `${sanitizedTitle || 'document'}_export.md`;
+
+  return { markdown, filename, title };
+}
+
 module.exports = {
   convertAstToHtml,
   convertAstToPdf,
+  convertMarkdownToAst,
   exportDocumentAsHtml,
-  exportDocumentAsPdf
+  exportDocumentAsPdf,
+  exportDocumentAsMarkdown
 };
+
