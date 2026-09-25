@@ -43,9 +43,11 @@ const astRoutes = require('./astRoutes');
 router.use('/:id/ast', astRoutes);
 
 // Document export endpoints
-const { exportDocumentPdf, exportDocumentHtml } = require('../controllers/exportController');
+const { exportDocumentPdf, exportDocumentHtml, exportDocumentMarkdown } = require('../controllers/exportController');
 router.get('/:id/export/pdf', exportDocumentPdf);
 router.get('/:id/export/html', exportDocumentHtml);
+router.get('/:id/export/markdown', exportDocumentMarkdown);
+
 
 module.exports = router;
 

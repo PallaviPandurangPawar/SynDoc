@@ -1,7 +1,7 @@
 const transformService = require('../services/transformService');
 
 /**
- * Controller to handle document and AST export operations (HTML, PDF).
+ * Controller to handle document and AST export operations (HTML, PDF, Markdown).
  */
 
 /**
@@ -52,6 +52,28 @@ async function exportDocumentHtml(req, res, next) {
     }
 
     return res.send(html);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Exports a stored document as a downloadable Markdown file.
+ * GET /api/export/documents/:id/markdown
+ */
+async function exportDocumentMarkdown(req, res, next) {
+  try {
+    const documentId = req.params.id;
+    const { markdown, filename } = await transformService.exportDocumentAsMarkdown(documentId);
+
+    const download = req.query.download !== 'false'; // default: download
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+
+    if (download) {
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    }
+
+    return res.send(markdown);
   } catch (error) {
     next(error);
   }
@@ -126,9 +148,43 @@ async function convertAstToHtml(req, res, next) {
   }
 }
 
+/**
+ * Converts raw Markdown in the request body directly into a SynDoc AST tree.
+ * POST /api/export/markdown-to-ast
+ *
+ * Body: { markdown: string, title?: string }
+ */
+async function convertMarkdownToAst(req, res, next) {
+  try {
+    const { markdown } = req.body;
+
+    if (typeof markdown !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Request body must contain a "markdown" string property'
+      });
+    }
+
+    const ast = transformService.convertMarkdownToAst(markdown);
+
+    return res.json({
+      success: true,
+      ast,
+      stats: {
+        childCount: Array.isArray(ast.children) ? ast.children.length : 0
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   exportDocumentPdf,
   exportDocumentHtml,
+  exportDocumentMarkdown,
   convertAstToPdf,
-  convertAstToHtml
+  convertAstToHtml,
+  convertMarkdownToAst
 };
+

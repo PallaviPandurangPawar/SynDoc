@@ -217,7 +217,25 @@ function renderNode(node) {
       return escapeHtml(node.content || node.text || '');
     }
 
+    case 'callout': {
+      const calloutType = escapeHtml(
+        (node.attributes && node.attributes.calloutType) || 'info'
+      );
+      // Map callout type to a semantic icon and label
+      const iconMap = { info: 'ℹ️', warning: '⚠️', success: '✅', error: '❌' };
+      const icon = iconMap[calloutType] || 'ℹ️';
+      const innerContent =
+        Array.isArray(node.children) && node.children.length > 0
+          ? node.children.map(renderNode).join('\n')
+          : `<p>${escapeHtml(node.content || node.text || '')}</p>`;
+      return `<div class="callout callout-${calloutType}" role="note">
+  <span class="callout-icon" aria-hidden="true">${icon}</span>
+  <div class="callout-body">${innerContent}</div>
+</div>`;
+    }
+
     default: {
+
       if (node.content || node.text) {
         return `<div class="custom-node">${escapeHtml(node.content || node.text)}</div>`;
       }
@@ -445,7 +463,27 @@ function getDocumentStyles() {
       font-style: italic;
     }
 
+    /* Callouts */
+    .callout {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin: 18px 0;
+      page-break-inside: avoid;
+      border-left: 4px solid transparent;
+    }
+    .callout-icon { font-size: 18px; flex-shrink: 0; line-height: 1.6; }
+    .callout-body { flex: 1; }
+    .callout-body p { margin: 0; }
+    .callout-info    { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+    .callout-warning { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+    .callout-success { background: #f0fdf4; border-color: #22c55e; color: #15803d; }
+    .callout-error   { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
+
     /* Print / PDF Page Formatting */
+
     @media print {
       body {
         padding: 0;
