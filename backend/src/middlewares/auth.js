@@ -1,6 +1,22 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+function getTokenFromRequest(req) {
+  const authHeader = req.headers?.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+
+  return null;
+}
+
+async function authenticateToken(token) {
+  if (!token) return null;
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  return User.findById(decoded.id);
+}
+
 /**
  * Verifies the JWT sent in the Authorization header (format: "Bearer <token>").
  * If valid, attaches the real logged-in user to req.user and continues.
@@ -8,19 +24,15 @@ const User = require('../models/User');
  */
 const protect = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = getTokenFromRequest(req);
+    if (!token) {
       return res.status(401).json({
         success: false,
         message: 'Not authorized, no token provided'
       });
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const user = await User.findById(decoded.id);
+    const user = await authenticateToken(token);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -38,4 +50,4 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+module.exports = { protect, getTokenFromRequest, authenticateToken };

@@ -3,12 +3,27 @@ const registerSyncHandlers = require('./syncHandler');
 const registerPresenceHandlers = require('./presenceHandler');
 const registerLockHandlers = require('./lockHandler');
 const { initWebSocket, getYDocs } = require('./websocket');
+const { authenticateToken } = require('../middlewares/auth');
 
 const initSocket = (server) => {
   const io = new Server(server, {
     cors: {
       origin: '*',
       methods: ['GET', 'POST']
+    }
+  });
+
+  io.use(async (socket, next) => {
+    try {
+      const token = socket.handshake.auth?.token ||
+        socket.handshake.headers.authorization?.replace(/^Bearer\s+/, '');
+      const user = await authenticateToken(token);
+
+      if (!user) return next(new Error('Not authorized'));
+      socket.data.user = user;
+      return next();
+    } catch (error) {
+      return next(new Error('Not authorized'));
     }
   });
 
