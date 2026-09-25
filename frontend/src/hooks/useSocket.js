@@ -12,7 +12,12 @@ export function useSocket() {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const newSocket = io(SOCKET_URL);
+    const token = localStorage.getItem('syncdoc_token');
+    if (!token) return undefined;
+
+    const newSocket = io(SOCKET_URL, {
+      auth: { token }
+    });
     setSocket(newSocket);
 
     newSocket.on('connect', () => setConnected(true));

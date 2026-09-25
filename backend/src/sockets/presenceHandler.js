@@ -1,4 +1,5 @@
 const presenceService = require('../services/presenceService');
+const { findAccessibleDocument } = require('../middlewares/documentAccess');
 
 // Tracks the last time each socket's cursor update was actually broadcast,
 // so rapid cursor movement (e.g. every keystroke) doesn't flood the network.
@@ -10,8 +11,15 @@ const CURSOR_THROTTLE_MS = 50; // at most ~20 broadcasts/sec per user
  */
 function registerPresenceHandlers(io, socket) {
   // Client announces they've joined a document with optional user info (name/color)
-  socket.on('presence-join', ({ documentId, name, color }) => {
+  socket.on('presence-join', async ({ documentId, name, color }) => {
     if (!documentId) return;
+    if (socket.data.documentId && socket.data.documentId !== documentId) return;
+
+    const document = await findAccessibleDocument(documentId, socket.data.user);
+    if (!document) {
+      socket.emit('presence-error', { message: 'You do not have access to this document' });
+      return;
+    }
 
     // Ensure socket is joined to room and has documentId saved
     socket.join(documentId);
@@ -27,9 +35,12 @@ function registerPresenceHandlers(io, socket) {
   });
 
   // Client moves their cursor/selection
-  socket.on('presence-cursor', ({ documentId, cursor }) => {
+  socket.on('presence-cursor', async ({ documentId, cursor }) => {
     const targetDocId = documentId || socket.data.documentId;
-    if (!targetDocId) return;
+    if (!targetDocId || socket.data.documentId !== targetDocId) return;
+
+    const document = await findAccessibleDocument(targetDocId, socket.data.user);
+    if (!document) return;
 
     // Always record the latest position internally, so a late-joining
     // user still sees the correct current cursor via presence-update.

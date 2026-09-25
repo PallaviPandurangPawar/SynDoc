@@ -11,6 +11,7 @@ const transformService = require('../services/transformService');
 async function exportDocumentPdf(req, res, next) {
   try {
     const documentId = req.params.id;
+    
     const { format } = req.query;
 
     const { pdfBuffer, filename } = await transformService.exportDocumentAsPdf(

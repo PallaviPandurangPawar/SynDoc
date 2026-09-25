@@ -2,6 +2,7 @@ const Y = require('yjs');
 const crdtService = require('../services/crdtService');
 const syncService = require('../services/syncService');
 const { getYDocs } = require('./websocket');
+const { findAccessibleDocument } = require('../middlewares/documentAccess');
 
 // Evict idle Y.Docs every 5 minutes — prevents long-running servers from
 // accumulating documents in memory for documents nobody is editing anymore.
@@ -18,6 +19,17 @@ setInterval(() => {
 function registerSyncHandlers(io, socket) {
   // Client asks to join a specific document's editing room
   socket.on('join-document', async (documentId) => {
+    const document = await findAccessibleDocument(documentId, socket.data.user);
+    if (!document) {
+      socket.emit('sync-error', { message: 'You do not have access to this document' });
+      return;
+    }
+
+    if (socket.data.documentId && socket.data.documentId !== documentId) {
+      socket.leave(socket.data.documentId);
+      crdtService.decrementSocketCount(socket.data.documentId);
+    }
+
     socket.join(documentId);
     socket.data.documentId = documentId;
 
@@ -49,7 +61,12 @@ function registerSyncHandlers(io, socket) {
   });
 
   // Client sends a CRDT update (an edit they made locally)
-  socket.on('sync-update', ({ documentId, update }) => {
+  socket.on('sync-update', async ({ documentId, update }) => {
+    if (socket.data.documentId !== documentId) return;
+
+    const document = await findAccessibleDocument(documentId, socket.data.user);
+    if (!document) return;
+
     const updateBytes = new Uint8Array(update);
 
     // Apply the update to our authoritative in-memory Y.Doc.

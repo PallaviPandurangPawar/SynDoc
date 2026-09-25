@@ -1,12 +1,17 @@
 const lockService = require('../services/lockService');
 const presenceService = require('../services/presenceService');
+const { findAccessibleDocument } = require('../middlewares/documentAccess');
 
 /**
  * Registers all block-locking event listeners for a single connected socket.
  */
 function registerLockHandlers(io, socket) {
   // Client wants to start editing a specific block exclusively
-  socket.on('lock-block', ({ documentId, nodeId, userName }) => {
+  socket.on('lock-block', async ({ documentId, nodeId, userName }) => {
+    if (socket.data.documentId !== documentId) return;
+    const document = await findAccessibleDocument(documentId, socket.data.user);
+    if (!document) return;
+
     const result = lockService.acquireLock(documentId, nodeId, socket.id, userName);
 
     if (result.success) {
@@ -21,7 +26,11 @@ function registerLockHandlers(io, socket) {
   });
 
   // Client is done editing a block, release it
-  socket.on('unlock-block', ({ documentId, nodeId }) => {
+  socket.on('unlock-block', async ({ documentId, nodeId }) => {
+    if (socket.data.documentId !== documentId) return;
+    const document = await findAccessibleDocument(documentId, socket.data.user);
+    if (!document) return;
+
     lockService.releaseLock(documentId, nodeId, socket.id);
     presenceService.updateLockedBlock(documentId, socket.id, null);
     io.to(documentId).emit('lock-update', lockService.getLocks(documentId));

@@ -12,16 +12,21 @@ const getAllDocuments = async (options = {}) => {
     order = 'desc',
     search,
     owner,
+    userId,
     includeAST = false
   } = options;
 
   const queryObj = { isDeleted: { $ne: true } };
 
+  if (userId) {
+    queryObj.$or = [{ owner: userId }, { collaborators: userId }];
+  }
+
   if (search && search.trim() !== '') {
     queryObj.title = { $regex: search.trim(), $options: 'i' };
   }
 
-  if (owner) {
+  if (owner && !userId) {
     queryObj.owner = owner;
   }
 
@@ -227,10 +232,14 @@ const patchDocumentContent = async (id, content) => {
 /**
  * Search documents by title (text index with regex fallback)
  */
-const searchDocumentsByTitle = async (query) => {
+const searchDocumentsByTitle = async (query, userId) => {
+  const accessFilter = userId
+    ? { $or: [{ owner: userId }, { collaborators: userId }] }
+    : {};
+
   try {
     const textResults = await Document.find(
-      { $text: { $search: query } },
+      { ...accessFilter, $text: { $search: query } },
       { score: { $meta: 'textScore' } }
     ).sort({ score: { $meta: 'textScore' } });
 
@@ -242,6 +251,7 @@ const searchDocumentsByTitle = async (query) => {
   }
 
   return await Document.find({
+    ...accessFilter,
     title: { $regex: query, $options: 'i' }
   }).sort({ updatedAt: -1 });
 };
@@ -249,8 +259,12 @@ const searchDocumentsByTitle = async (query) => {
 /**
  * Get total document count
  */
-const getDocumentCount = async () => {
-  return await Document.countDocuments();
+const getDocumentCount = async (userId) => {
+  if (!userId) return 0;
+  return await Document.countDocuments({
+    isDeleted: { $ne: true },
+    $or: [{ owner: userId }, { collaborators: userId }]
+  });
 };
 
 module.exports = {
