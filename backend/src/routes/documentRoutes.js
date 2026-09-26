@@ -6,6 +6,9 @@ const {
   getDocumentById,
   updateDocument,
   deleteDocument,
+  getTrash,
+  restoreDocument,
+  permanentlyDeleteDocument,
   duplicateDocument,
   getDocumentHistory,
   addCollaborator,
@@ -25,6 +28,12 @@ router.get('/', getDocuments);
 router.post('/', validateAST, createDocument);
 router.get('/search', searchDocuments);
 router.get('/stats', getStats);
+
+// Trash routes — must be registered BEFORE the '/:id' access-check middleware
+// below, because that middleware only matches non-deleted documents.
+router.get('/trash', getTrash);
+router.patch('/:id/restore', restoreDocument);
+router.delete('/:id/permanent', permanentlyDeleteDocument);
 
 // All document-scoped routes require membership. Destructive or sharing actions
 // add the owner-only middleware below.
@@ -57,4 +66,3 @@ router.get('/:id/export/markdown', exportDocumentMarkdown);
 
 
 module.exports = router;
-

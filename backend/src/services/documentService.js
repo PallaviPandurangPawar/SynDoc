@@ -127,24 +127,28 @@ const deleteDocument = async (id) => {
 };
 
 /**
- * Fetch documents currently in the trash (soft-deleted, still within the 7-day window)
+ * Fetch documents currently in the trash (soft-deleted, still within the 7-day window),
+ * scoped to documents owned by this user (trash is personal, not shared)
  */
-const getTrashedDocuments = async () => {
+const getTrashedDocuments = async (userId) => {
+  if (!userId) return [];
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   return Document.find({
     isDeleted: true,
-    deletedAt: { $gte: sevenDaysAgo }
+    deletedAt: { $gte: sevenDaysAgo },
+    owner: userId
   })
     .sort({ deletedAt: -1 })
     .populate('owner', 'name email');
 };
 
 /**
- * Restore a soft-deleted document back to normal (undo delete)
+ * Restore a soft-deleted document back to normal (undo delete).
+ * Only the owner can restore their own document.
  */
-const restoreDocument = async (id) => {
+const restoreDocument = async (id, userId) => {
   const result = await Document.findOneAndUpdate(
-    { _id: id, isDeleted: true },
+    { _id: id, isDeleted: true, owner: userId },
     { isDeleted: false, deletedAt: null },
     { new: true }
   );
@@ -162,6 +166,21 @@ const purgeExpiredTrash = async () => {
     deletedAt: { $lt: sevenDaysAgo }
   });
   return result.deletedCount;
+};
+
+/**
+ * Duplicate / clone an existing document
+ */
+/**
+ * Permanently deletes one document from the trash immediately (user-triggered).
+ */
+const permanentlyDeleteDocument = async (id, userId) => {
+  const result = await Document.findOneAndDelete({
+    _id: id,
+    isDeleted: true,
+    owner: userId
+  });
+  return result;
 };
 
 /**
@@ -314,6 +333,7 @@ module.exports = {
   getTrashedDocuments,
   restoreDocument,
   purgeExpiredTrash,
+  permanentlyDeleteDocument,
   duplicateDocument,
   getDocumentHistory,
   addCollaborator,

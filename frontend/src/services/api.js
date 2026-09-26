@@ -22,6 +22,9 @@ export const getDocumentById = async (id) => (await api.get(`/documents/${id}`))
 export const createDocument = async ({ title, content, ast }) => (await api.post('/documents', { title, content, ast })).data;
 export const updateDocument = async (id, { title, content, ast }) => (await api.put(`/documents/${id}`, { title, content, ast })).data;
 export const deleteDocument = async (id) => (await api.delete(`/documents/${id}`)).data;
+export const getTrash = async () => (await api.get('/documents/trash')).data;
+export const restoreDocument = async (id) => (await api.patch(`/documents/${id}/restore`)).data;
+export const permanentlyDeleteDocument = async (id) => (await api.delete(`/documents/${id}/permanent`)).data;
 
 export const registerUser = async ({ name, email, password }) => (await api.post('/auth/register', { name, email, password })).data;
 export const loginUser = async ({ email, password }) => (await api.post('/auth/login', { email, password })).data;
