@@ -3,6 +3,8 @@ const Y = require('yjs');
 const yUtils = require('y-websocket/bin/utils');
 const crdtService = require('../services/crdtService');
 const syncService = require('../services/syncService');
+const { authenticateToken } = require('../middlewares/auth');
+const { findAccessibleDocument } = require('../middlewares/documentAccess');
 
 let wssInstance = null;
 let ioInstance = null;
@@ -93,11 +95,30 @@ function initWebSocket(server, io = null) {
   });
 
   // Attach upgrade handler to HTTP server
-  server.on('upgrade', (request, socket, head) => {
+  server.on('upgrade', async (request, socket, head) => {
     const pathname = (request.url || '').split('?')[0];
 
     // Let Socket.IO handle its own connections
     if (pathname.startsWith('/socket.io')) {
+      return;
+    }
+
+    try {
+      const parsed = new URL(request.url || '/', 'http://localhost');
+      const token = request.headers.authorization?.replace(/^Bearer\s+/, '') ||
+        parsed.searchParams.get('token') || parsed.searchParams.get('access_token');
+      const user = await authenticateToken(token);
+      const docName = extractDocName(request.url);
+      const document = await findAccessibleDocument(docName, user);
+
+      if (!document) {
+        socket.destroy();
+        return;
+      }
+
+      request.user = user;
+    } catch (error) {
+      socket.destroy();
       return;
     }
 

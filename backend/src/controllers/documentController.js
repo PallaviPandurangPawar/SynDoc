@@ -51,6 +51,7 @@ const getDocuments = async (req, res) => {
       order,
       search,
       owner,
+      userId: req.user._id,
       includeAST
     });
 
@@ -114,7 +115,7 @@ const updateDocument = async (req, res) => {
       });
     }
 
-    const { title, content, ast, owner, collaborators } = req.body;
+    const { title, content, ast } = req.body;
 
     // Ownership check: only enforced if the document already has an owner assigned.
     // Documents with no owner (e.g. anonymous test docs) remain open, unchanged from before.
@@ -144,8 +145,8 @@ const updateDocument = async (req, res) => {
       content,
       ast,
       lastModifiedBy: req.user.name,
-      owner,
-      collaborators
+      owner: undefined,
+      collaborators: undefined
     });
 
     if (!updatedDoc) {
@@ -228,12 +229,12 @@ const duplicateDocument = async (req, res) => {
       });
     }
 
-    const { title, lastModifiedBy, owner } = req.body;
+    const { title } = req.body;
 
     const clonedDoc = await documentService.duplicateDocument(id, {
       title,
-      lastModifiedBy,
-      owner
+      lastModifiedBy: req.user.name,
+      owner: req.user._id
     });
 
     if (!clonedDoc) {
@@ -393,7 +394,7 @@ const searchDocuments = async (req, res) => {
       });
     }
 
-    const results = await documentService.searchDocumentsByTitle(q);
+    const results = await documentService.searchDocumentsByTitle(q, req.user._id);
 
     return res.status(200).json({
       success: true,
@@ -412,7 +413,7 @@ const searchDocuments = async (req, res) => {
 // Get total document count
 const getStats = async (req, res) => {
   try {
-    const count = await documentService.getDocumentCount();
+    const count = await documentService.getDocumentCount(req.user._id);
 
     return res.status(200).json({
       success: true,
