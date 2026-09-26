@@ -217,6 +217,58 @@ const deleteDocument = async (req, res) => {
   }
 };
 
+// Get all documents currently in the trash (soft-deleted, within 7-day window)
+const getTrash = async (req, res) => {
+  try {
+    const trashedDocs = await documentService.getTrashedDocuments();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Trash fetched successfully',
+      data: trashedDocs
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// Restore a soft-deleted document out of the trash
+const restoreDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document ID format'
+      });
+    }
+
+    const restoredDoc = await documentService.restoreDocument(id);
+
+    if (!restoredDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found in trash'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Document restored successfully',
+      data: restoredDoc
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
 // Duplicate / clone document by ID
 const duplicateDocument = async (req, res) => {
   try {
@@ -453,6 +505,8 @@ module.exports = {
   getDocumentById,
   updateDocument,
   deleteDocument,
+  getTrash,
+  restoreDocument,
   duplicateDocument,
   getDocumentHistory,
   addCollaborator,

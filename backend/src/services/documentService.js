@@ -127,6 +127,44 @@ const deleteDocument = async (id) => {
 };
 
 /**
+ * Fetch documents currently in the trash (soft-deleted, still within the 7-day window)
+ */
+const getTrashedDocuments = async () => {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  return Document.find({
+    isDeleted: true,
+    deletedAt: { $gte: sevenDaysAgo }
+  })
+    .sort({ deletedAt: -1 })
+    .populate('owner', 'name email');
+};
+
+/**
+ * Restore a soft-deleted document back to normal (undo delete)
+ */
+const restoreDocument = async (id) => {
+  const result = await Document.findOneAndUpdate(
+    { _id: id, isDeleted: true },
+    { isDeleted: false, deletedAt: null },
+    { new: true }
+  );
+  return result;
+};
+
+/**
+ * Permanently deletes any document that's been in the trash for more than 7 days.
+ * Meant to be run periodically (see server.js).
+ */
+const purgeExpiredTrash = async () => {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const result = await Document.deleteMany({
+    isDeleted: true,
+    deletedAt: { $lt: sevenDaysAgo }
+  });
+  return result.deletedCount;
+};
+
+/**
  * Duplicate / clone an existing document
  */
 const duplicateDocument = async (id, options = {}) => {
@@ -273,6 +311,9 @@ module.exports = {
   createDocument,
   updateDocument,
   deleteDocument,
+  getTrashedDocuments,
+  restoreDocument,
+  purgeExpiredTrash,
   duplicateDocument,
   getDocumentHistory,
   addCollaborator,
