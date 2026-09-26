@@ -220,7 +220,7 @@ const deleteDocument = async (req, res) => {
 // Get all documents currently in the trash (soft-deleted, within 7-day window)
 const getTrash = async (req, res) => {
   try {
-    const trashedDocs = await documentService.getTrashedDocuments();
+    const trashedDocs = await documentService.getTrashedDocuments(req.user._id);
 
     return res.status(200).json({
       success: true,
@@ -247,7 +247,7 @@ const restoreDocument = async (req, res) => {
       });
     }
 
-    const restoredDoc = await documentService.restoreDocument(id);
+    const restoredDoc = await documentService.restoreDocument(id, req.user._id);
 
     if (!restoredDoc) {
       return res.status(404).json({
@@ -260,6 +260,39 @@ const restoreDocument = async (req, res) => {
       success: true,
       message: 'Document restored successfully',
       data: restoredDoc
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// Permanently delete a document that's already in the trash
+const permanentlyDeleteDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document ID format'
+      });
+    }
+
+    const deleted = await documentService.permanentlyDeleteDocument(id, req.user._id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: 'Document not found in trash'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Document permanently deleted'
     });
   } catch (error) {
     return res.status(500).json({
@@ -507,6 +540,7 @@ module.exports = {
   deleteDocument,
   getTrash,
   restoreDocument,
+  permanentlyDeleteDocument,
   duplicateDocument,
   getDocumentHistory,
   addCollaborator,

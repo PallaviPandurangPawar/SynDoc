@@ -98,13 +98,13 @@
   display: flex;
   flex: 1;
   height: calc(100vh - 56px);
-  padding: 4px 0 0 36px;
-  gap: 28px;
+  padding: 4px 0 0 0px;
+  gap: 0px;
   overflow: hidden;
 }
 
 .sidebar {
-  width: 210px;
+  width: 190px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -162,6 +162,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
 }
 
 .menu-item {
@@ -179,6 +180,8 @@
   border: none;
   cursor: pointer;
   width: 100%;
+  margin: 0;
+  box-sizing: border-box;
   text-align: left;
 }
 
@@ -663,4 +666,12 @@
   .board-bottom { flex-direction: column; align-items: stretch; }
   .recent-activity-card { width: 100%; max-width: 100%; }
   .new-doc-btn { align-self: flex-end; }
+}
+
+.page-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  height: 100%;
 }
