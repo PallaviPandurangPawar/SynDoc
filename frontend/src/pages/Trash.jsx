@@ -1,5 +1,5 @@
 // Trash page — soft-deleted documents, renders inside AppLayout's <Outlet />
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getTrash, restoreDocument, permanentlyDeleteDocument } from '../services/api';
 import Loader from '../components/Loader/Loader';
 import './Trash.css';
@@ -17,6 +17,9 @@ export default function Trash() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [search, setSearch] = useState('');
+  const [deleteModal, setDeleteModal] = useState(null); // { id, title }
+  const [resultModal, setResultModal] = useState(null); // { message: string }
 
   useEffect(() => { loadTrash(); }, []);
 
@@ -42,17 +45,27 @@ export default function Trash() {
     }
   };
 
-  const handleDeleteForever = async (id, title) => {
+  const handleDeleteForever = (id, title) => {
     setOpenMenuId(null);
-    const confirmed = window.confirm(`Permanently delete "${title}"? This cannot be undone.`);
-    if (!confirmed) return;
+    setDeleteModal({ id, title });
+  };
+
+  const confirmDeleteForever = async () => {
+    const { id } = deleteModal;
+    setDeleteModal(null);
     try {
       await permanentlyDeleteDocument(id);
       setDocuments((prev) => prev.filter((doc) => doc._id !== id));
     } catch {
-      alert('Failed to delete document.');
+      setResultModal({ message: 'Failed to delete document.' });
     }
   };
+
+
+  const filteredDocuments = useMemo(() => {
+    if (!search.trim()) return documents;
+    return documents.filter((doc) => doc.title.toLowerCase().includes(search.trim().toLowerCase()));
+  }, [documents, search]);
 
   if (loading) return <Loader label="Loading trash..." />;
   if (error) return <p style={{ padding: '24px', color: 'salmon' }}>{error}</p>;
@@ -60,17 +73,30 @@ export default function Trash() {
   return (
     <div className="page-inner" onClick={() => setOpenMenuId(null)}>
       <section className="trash-header-row">
-        <h2 className="trash-title">Trash</h2>
-        <p className="trash-subtitle">
-          Items are kept for 7 days, then deleted automatically.
-        </p>
+        <div>
+          <h2 className="trash-title">Trash</h2>
+          <p className="trash-subtitle">
+            Items are kept for 7 days, then deleted automatically.
+          </p>
+        </div>
+        <div className="trash-search-wrapper">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search your file....."
+            aria-label="Search trash"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button className="search-btn">Search</button>
+        </div>
       </section>
 
       <section className="files-grid">
-        {documents.length === 0 ? (
-          <p className="no-results">Trash is empty.</p>
+        {filteredDocuments.length === 0 ? (
+          <p className="no-results">{documents.length === 0 ? 'Trash is empty.' : 'No matching documents found.'}</p>
         ) : (
-          documents.map((doc) => {
+          filteredDocuments.map((doc) => {
             const days = daysRemaining(doc.deletedAt);
             return (
               <div
@@ -107,6 +133,35 @@ export default function Trash() {
           })
         )}
       </section>
+
+      {deleteModal && (
+        <div className="modal-overlay" onClick={() => setDeleteModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Delete forever?</h3>
+            <p style={{ color: 'var(--text-light)', fontFamily: 'var(--font-sans)', fontSize: '14px', margin: '0 0 4px 0' }}>
+              Permanently delete "{deleteModal.title}"? This cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button className="modal-btn-secondary" onClick={() => setDeleteModal(null)}>Cancel</button>
+              <button className="modal-btn-primary" onClick={confirmDeleteForever}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resultModal && (
+        <div className="modal-overlay" onClick={() => setResultModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title" style={{ color: '#e07a5f' }}>Something went wrong</h3>
+            <p style={{ color: 'var(--text-light)', fontFamily: 'var(--font-sans)', fontSize: '14px', margin: '0 0 4px 0' }}>
+              {resultModal.message}
+            </p>
+            <div className="modal-actions">
+              <button className="modal-btn-primary" onClick={() => setResultModal(null)}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

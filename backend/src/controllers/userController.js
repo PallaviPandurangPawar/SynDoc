@@ -53,11 +53,14 @@ const updateProfile = async (req, res) => {
       }
     }
 
+    // Only overwrite a field if the user actually typed something into it —
+    // now that the form always starts blank, an empty field means "leave this alone",
+    // not "clear this out".
     if (name !== undefined && name.trim() !== '') user.name = name.trim();
-    if (phone !== undefined) user.phone = phone.trim();
-    if (address !== undefined) user.address = address.trim();
-    if (about !== undefined) user.about = about.trim();
-    if (avatarData !== undefined) user.avatarData = avatarData;
+    if (phone !== undefined && phone.trim() !== '') user.phone = phone.trim();
+    if (address !== undefined && address.trim() !== '') user.address = address.trim();
+    if (about !== undefined && about.trim() !== '') user.about = about.trim();
+    if (avatarData !== undefined && avatarData !== '') user.avatarData = avatarData;
 
     await user.save();
 
