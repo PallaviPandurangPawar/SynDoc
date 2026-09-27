@@ -21,6 +21,8 @@ export default function Profile() {
   const [about, setAbout] = useState('');
   const [avatarPreview, setAvatarPreview] = useState('');
   const [savedProfile, setSavedProfile] = useState({ name: '', address: '', email: '', phone: '', about: '' });
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [resultModal, setResultModal] = useState(null); // { type: 'success' | 'error', message: string }
 
   const nameRef = useRef(null);
   const addressRef = useRef(null);
@@ -37,11 +39,6 @@ export default function Profile() {
       setLoading(true);
       const res = await getProfile();
       const p = res.data || {};
-      setName(p.name || '');
-      setAddress(p.address || '');
-      setEmail(p.email || '');
-      setPhone(p.phone || '');
-      setAbout(p.about || '');
       setAvatarPreview(p.avatarData || '');
       setSavedProfile({
         name: p.name || '',
@@ -77,12 +74,12 @@ export default function Profile() {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = async () => {
-    if (!name.trim()) {
-      alert('Name cannot be empty.');
-      nameRef.current?.focus();
-      return;
-    }
+  const handleSubmitClick = () => {
+    setShowConfirmModal(true);
+  };
+
+  const performSave = async () => {
+    setShowConfirmModal(false);
     setSaving(true);
     try {
       const res = await updateProfile({ name, address, email, phone, about, avatarData: avatarPreview });
@@ -95,10 +92,15 @@ export default function Profile() {
         phone: p.phone || '',
         about: p.about || ''
       });
-      alert('Profile updated successfully.');
+      setName('');
+      setAddress('');
+      setEmail('');
+      setPhone('');
+      setAbout('');
+      setResultModal({ type: 'success', message: 'Profile updated successfully.' });
     } catch (err) {
       const message = err?.response?.data?.message || 'Failed to update profile.';
-      alert(message);
+      setResultModal({ type: 'error', message });
     } finally {
       setSaving(false);
     }
@@ -243,10 +245,41 @@ export default function Profile() {
       </div>
 
       <div className="profile-submit-row">
-        <button type="button" className="profile-submit-btn" ref={submitBtnRef} onClick={handleSubmit} disabled={saving}>
+        <button type="button" className="profile-submit-btn" ref={submitBtnRef} onClick={handleSubmitClick} disabled={saving}>
           {saving ? 'Saving...' : 'Submit New Data'}
         </button>
       </div>
+
+      {showConfirmModal && (
+        <div className="modal-overlay" onClick={() => setShowConfirmModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Update your details?</h3>
+            <p style={{ color: 'var(--text-light)', fontFamily: 'var(--font-sans)', fontSize: '14px', margin: '0 0 4px 0' }}>
+              Are you sure you want to save these changes to your profile?
+            </p>
+            <div className="modal-actions">
+              <button className="modal-btn-secondary" onClick={() => setShowConfirmModal(false)}>Cancel</button>
+              <button className="modal-btn-primary" onClick={performSave}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resultModal && (
+        <div className="modal-overlay" onClick={() => setResultModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title" style={{ color: resultModal.type === 'error' ? '#e07a5f' : 'var(--text-white)' }}>
+              {resultModal.type === 'error' ? 'Something went wrong' : 'Success'}
+            </h3>
+            <p style={{ color: 'var(--text-light)', fontFamily: 'var(--font-sans)', fontSize: '14px', margin: '0 0 4px 0' }}>
+              {resultModal.message}
+            </p>
+            <div className="modal-actions">
+              <button className="modal-btn-primary" onClick={() => setResultModal(null)}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

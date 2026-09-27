@@ -20,6 +20,11 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newDocTitle, setNewDocTitle] = useState('');
+  const [deleteModal, setDeleteModal] = useState(null); // { id, title }
+  const [renameModal, setRenameModal] = useState(null); // { id, currentTitle, newTitle }
+  const [resultModal, setResultModal] = useState(null); // { message: string }
   const navigate = useNavigate();
 
   useEffect(() => { loadDocuments(); }, []);
@@ -36,38 +41,54 @@ export default function Dashboard() {
     }
   };
 
-  const handleCreate = async () => {
-    const title = window.prompt('Document title:');
+  const handleCreate = () => {
+    setNewDocTitle('');
+    setShowCreateModal(true);
+  };
+
+  const handleConfirmCreate = async () => {
+    const title = newDocTitle.trim();
     if (!title) return;
     try {
       const res = await createDocument({ title, content: [], ast: null });
+      setShowCreateModal(false);
       navigate(`/document/${res.data._id}`);
     } catch {
       alert('Failed to create document.');
     }
   };
 
-  const handleDelete = async (id, title) => {
-    const confirmed = window.confirm(`Delete "${title}"? This cannot be undone from the app.`);
-    if (!confirmed) return;
+  const handleDelete = (id, title) => {
+    setOpenMenuId(null);
+    setDeleteModal({ id, title });
+  };
+
+  const confirmDelete = async () => {
+    const { id } = deleteModal;
+    setDeleteModal(null);
     try {
       await deleteDocument(id);
       setDocuments((prev) => prev.filter((doc) => doc._id !== id));
     } catch {
-      alert('Failed to delete document.');
+      setResultModal({ message: 'Failed to delete document.' });
     }
-    setOpenMenuId(null);
   };
 
-  const handleRename = async (id, currentTitle) => {
+  const handleRename = (id, currentTitle) => {
     setOpenMenuId(null);
-    const newTitle = window.prompt('New document title:', currentTitle);
-    if (!newTitle || newTitle.trim() === '' || newTitle === currentTitle) return;
+    setRenameModal({ id, currentTitle, newTitle: currentTitle });
+  };
+
+  const confirmRename = async () => {
+    const { id, currentTitle, newTitle } = renameModal;
+    const trimmed = newTitle.trim();
+    setRenameModal(null);
+    if (!trimmed || trimmed === currentTitle) return;
     try {
-      await updateDocument(id, { title: newTitle.trim() });
-      setDocuments((prev) => prev.map((doc) => (doc._id === id ? { ...doc, title: newTitle.trim() } : doc)));
+      await updateDocument(id, { title: trimmed });
+      setDocuments((prev) => prev.map((doc) => (doc._id === id ? { ...doc, title: trimmed } : doc)));
     } catch {
-      alert('Failed to rename document.');
+      setResultModal({ message: 'Failed to rename document.' });
     }
   };
 
@@ -174,6 +195,77 @@ export default function Dashboard() {
           + New Document
         </button>
       </div>
+
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">New Document</h3>
+            <input
+              type="text"
+              className="modal-input"
+              placeholder="Document title....."
+              value={newDocTitle}
+              autoFocus
+              onChange={(e) => setNewDocTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmCreate(); }}
+            />
+            <div className="modal-actions">
+              <button className="modal-btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
+              <button className="modal-btn-primary" onClick={handleConfirmCreate}>Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteModal && (
+        <div className="modal-overlay" onClick={() => setDeleteModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Delete document?</h3>
+            <p style={{ color: 'var(--text-light)', fontFamily: 'var(--font-sans)', fontSize: '14px', margin: '0 0 4px 0' }}>
+              Delete "{deleteModal.title}"? This cannot be undone from the app.
+            </p>
+            <div className="modal-actions">
+              <button className="modal-btn-secondary" onClick={() => setDeleteModal(null)}>Cancel</button>
+              <button className="modal-btn-primary" onClick={confirmDelete}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {renameModal && (
+        <div className="modal-overlay" onClick={() => setRenameModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Rename document</h3>
+            <input
+              type="text"
+              className="modal-input"
+              placeholder="Document title....."
+              value={renameModal.newTitle}
+              autoFocus
+              onChange={(e) => setRenameModal({ ...renameModal, newTitle: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') confirmRename(); }}
+            />
+            <div className="modal-actions">
+              <button className="modal-btn-secondary" onClick={() => setRenameModal(null)}>Cancel</button>
+              <button className="modal-btn-primary" onClick={confirmRename}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resultModal && (
+        <div className="modal-overlay" onClick={() => setResultModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title" style={{ color: '#e07a5f' }}>Something went wrong</h3>
+            <p style={{ color: 'var(--text-light)', fontFamily: 'var(--font-sans)', fontSize: '14px', margin: '0 0 4px 0' }}>
+              {resultModal.message}
+            </p>
+            <div className="modal-actions">
+              <button className="modal-btn-primary" onClick={() => setResultModal(null)}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
