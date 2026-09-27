@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AppLayout from './components/Layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import Trash from './pages/Trash';
+import Profile from './pages/Profile';
 import DocumentPage from './pages/DocumentPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -29,6 +30,7 @@ function App() {
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/trash" element={<Trash />} />
+              <Route path="/profile" element={<Profile />} />
             </Route>
 
             <Route path="/document/:id" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />

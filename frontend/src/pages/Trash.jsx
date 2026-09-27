@@ -1,6 +1,7 @@
 // Trash page — soft-deleted documents, renders inside AppLayout's <Outlet />
 import { useEffect, useState } from 'react';
 import { getTrash, restoreDocument, permanentlyDeleteDocument } from '../services/api';
+import Loader from '../components/Loader/Loader';
 import './Trash.css';
 
 const TRASH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -53,7 +54,7 @@ export default function Trash() {
     }
   };
 
-  if (loading) return <p style={{ padding: '24px' }}>Loading trash...</p>;
+  if (loading) return <Loader label="Loading trash..." />;
   if (error) return <p style={{ padding: '24px', color: 'salmon' }}>{error}</p>;
 
   return (

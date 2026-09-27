@@ -25,7 +25,7 @@ export default function AppLayout() {
           <span className="logo-sync">Sync</span><span className="logo-doc">Doc</span>
         </div>
         <div className="top-nav-actions">
-          <button className="nav-icon-btn" aria-label="User Profile" title="Profile">
+          <button className="nav-icon-btn" aria-label="User Profile" title="Profile" onClick={() => navigate('/profile')}>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="8" r="4.5" />
               <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" />
@@ -44,6 +44,9 @@ export default function AppLayout() {
         <aside className="sidebar">
           <div className="profile-section">
             <div className="avatar-ring">
+              {user?.avatarData ? (
+              <img className="avatar-img" src={user.avatarData} alt={user?.name || 'Your avatar'} />
+              ) : (
               <svg className="avatar-svg" viewBox="0 0 100 100" width="100%" height="100%">
                 <defs>
                   <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -88,6 +91,7 @@ export default function AppLayout() {
                 <path d="M34 31 L39 39 L40 33 L45 43 L47 34 L52 45 L54 34 L59 42 L61 33 L65 39 L63 28 C58 21 42 21 34 31 Z" fill="url(#hair-grad)" />
                 <path d="M59 37 L62.5 45 L60.5 36 Z" fill="#e85b3a" />
               </svg>
+              )}
             </div>
             <h2 className="user-name">{user?.name || 'My Name'}</h2>
           </div>
@@ -103,7 +107,14 @@ export default function AppLayout() {
               <span className="menu-text">Dashboard</span>
               {isActive('/') && <span className="active-indicator-right"></span>}
             </button>
-            <button className="menu-item"><span className="menu-text">My Profile</span></button>
+            <button
+              className={`menu-item${isActive('/profile') ? ' active' : ''}`}
+              onClick={() => navigate('/profile')}
+            >
+              {isActive('/profile') && <span className="active-indicator-left"></span>}
+              <span className="menu-text">My Profile</span>
+              {isActive('/profile') && <span className="active-indicator-right"></span>}
+            </button>
             <button
               className={`menu-item${isActive('/trash') ? ' active' : ''}`}
               onClick={() => navigate('/trash')}
@@ -120,7 +131,11 @@ export default function AppLayout() {
             <div className="account-menu-wrapper" onClick={(e) => e.stopPropagation()}>
               <button className="user-account-row" onClick={() => setAccountMenuOpen((v) => !v)}>
                 <div className="mini-avatar">
-                  <div className="mini-avatar-initial">{user?.name ? user.name.charAt(0).toUpperCase() : '?'}</div>
+                  {user?.avatarData ? (
+                    <img src={user.avatarData} alt={user?.name || 'Your avatar'} />
+                  ) : (
+                    <div className="mini-avatar-initial">{user?.name ? user.name.charAt(0).toUpperCase() : '?'}</div>
+                  )}
                 </div>
                 <span className="email-text">{user?.email || 'Email Id'}</span>
                 <svg className="chevron-down" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
