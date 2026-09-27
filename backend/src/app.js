@@ -4,12 +4,13 @@ const mongoose = require('mongoose');
 const documentRoutes = require('./routes/documentRoutes');
 const exportRoutes = require('./routes/exportRoutes');
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' })); // raised from the default 100kb so a Base64 profile photo can fit
 
 // Routes
 app.get('/', (req, res) => {
@@ -36,6 +37,7 @@ app.get('/health', (req, res) => {
 app.use('/api/documents', documentRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // 404 Handler
 app.use((req, res) => {

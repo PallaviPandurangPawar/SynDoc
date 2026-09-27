@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDocuments, createDocument, deleteDocument, updateDocument } from '../services/api';
+import Loader from '../components/Loader/Loader';
 
 function formatTime(dateString) {
   const d = new Date(dateString);
@@ -83,7 +84,7 @@ export default function Dashboard() {
       .slice(0, 5);
   }, [documents]);
 
-  if (loading) return <p style={{ padding: '24px' }}>Loading documents...</p>;
+  if (loading) return <Loader label="Loading documents..." />;
   if (error) return <p style={{ padding: '24px', color: 'salmon' }}>{error}</p>;
 
   return (

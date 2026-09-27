@@ -675,3 +675,10 @@
   flex: 1;
   height: 100%;
 }
+
+.mini-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

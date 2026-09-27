@@ -25,6 +25,8 @@ export const deleteDocument = async (id) => (await api.delete(`/documents/${id}`
 export const getTrash = async () => (await api.get('/documents/trash')).data;
 export const restoreDocument = async (id) => (await api.patch(`/documents/${id}/restore`)).data;
 export const permanentlyDeleteDocument = async (id) => (await api.delete(`/documents/${id}/permanent`)).data;
+export const getProfile = async () => (await api.get('/users/me')).data;
+export const updateProfile = async (payload) => (await api.put('/users/me', payload)).data;
 
 export const registerUser = async ({ name, email, password }) => (await api.post('/auth/register', { name, email, password })).data;
 export const loginUser = async ({ email, password }) => (await api.post('/auth/login', { email, password })).data;

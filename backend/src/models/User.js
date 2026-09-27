@@ -25,6 +25,25 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: '#4A90D9', // used for presence cursor colors later
     },
+    phone: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    address: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    about: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    avatarData: {
+      type: String,
+      default: '', // Base64 data URL of the uploaded profile photo
+    },
   },
   { timestamps: true }
 );
