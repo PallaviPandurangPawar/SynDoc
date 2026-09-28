@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerUser, verifyOtp, resendOtp } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import AuthLayout from '../components/Layout/AuthLayout';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -81,13 +82,13 @@ export default function Register() {
   // ── OTP screen ──
   if (step === 'otp') {
     return (
-      <div style={{ maxWidth: '360px', margin: '80px auto', padding: '24px' }}>
-        <h1>Verify your email</h1>
-        {info && <p style={{ color: 'green' }}>{info}</p>}
+      <AuthLayout title="Verify your email">
+        {info && <p className="auth-info">{info}</p>}
         <form onSubmit={handleVerify}>
-          <div style={{ marginBottom: '12px' }}>
-            <label>Enter the 6-digit code</label>
+          <div className="auth-field">
+            <label className="auth-label">Enter the 6-digit code</label>
             <input
+              className="auth-input auth-otp-input"
               type="text"
               inputMode="numeric"
               maxLength={6}
@@ -95,58 +96,56 @@ export default function Register() {
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
               required
               autoFocus
-              style={{ width: '100%', padding: '8px', fontSize: '20px', letterSpacing: '6px', textAlign: 'center' }}
             />
           </div>
-          {error && <p style={{ color: 'red' }}>{error}</p>}
-          <button type="submit" disabled={loading || otp.length !== 6} style={{ width: '100%', padding: '10px' }}>
+          {error && <p className="auth-error">{error}</p>}
+          <button className="auth-btn" type="submit" disabled={loading || otp.length !== 6}>
             {loading ? 'Verifying...' : 'Verify & Continue'}
           </button>
         </form>
-        <p style={{ marginTop: '16px' }}>
+        <p className="auth-footer">
           Didn't get the code?{' '}
           {cooldown > 0 ? (
             <span>Resend in {cooldown}s</span>
           ) : (
-            <button type="button" onClick={handleResend} style={{ background: 'none', border: 'none', color: 'blue', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 'inherit' }}>
+            <button type="button" className="auth-link-btn" onClick={handleResend}>
               Resend code
             </button>
           )}
         </p>
-        <p>
-          <button type="button" onClick={goBack} style={{ background: 'none', border: 'none', color: 'blue', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 'inherit' }}>
+        <p className="auth-footer">
+          <button type="button" className="auth-link-btn" onClick={goBack}>
             Change email or password
           </button>
         </p>
-      </div>
+      </AuthLayout>
     );
   }
 
   // ── Sign-up form screen ──
   return (
-    <div style={{ maxWidth: '360px', margin: '80px auto', padding: '24px' }}>
-      <h1>Create your SyncDoc account</h1>
+    <AuthLayout title="Create your SyncDoc account">
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '12px' }}>
-          <label>Name</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} required style={{ width: '100%', padding: '8px' }} />
+        <div className="auth-field">
+          <label className="auth-label">Name</label>
+          <input className="auth-input" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
-        <div style={{ marginBottom: '12px' }}>
-          <label>Email</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: '100%', padding: '8px' }} />
+        <div className="auth-field">
+          <label className="auth-label">Email</label>
+          <input className="auth-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
-        <div style={{ marginBottom: '12px' }}>
-          <label>Password (min 6 characters)</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} style={{ width: '100%', padding: '8px' }} />
+        <div className="auth-field">
+          <label className="auth-label">Password (min 6 characters)</label>
+          <input className="auth-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
         </div>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: '10px' }}>
+        {error && <p className="auth-error">{error}</p>}
+        <button className="auth-btn" type="submit" disabled={loading}>
           {loading ? 'Sending code...' : 'Sign Up'}
         </button>
       </form>
-      <p style={{ marginTop: '16px' }}>
+      <p className="auth-footer">
         Already have an account? <Link to="/login">Log in</Link>
       </p>
-    </div>
+    </AuthLayout>
   );
 }
