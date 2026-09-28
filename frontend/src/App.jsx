@@ -3,6 +3,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { DocumentProvider } from './context/DocumentContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import AppLayout from './components/Layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import Trash from './pages/Trash';
@@ -20,24 +21,26 @@ function ProtectedRoute({ children }) {
 
 function App() {
   return (
-    <AuthProvider>
-      <DocumentProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <DocumentProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
-            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/trash" element={<Trash />} />
-              <Route path="/profile" element={<Profile />} />
-            </Route>
+              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/trash" element={<Trash />} />
+                <Route path="/profile" element={<Profile />} />
+              </Route>
 
-            <Route path="/document/:id" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
-          </Routes>
-        </BrowserRouter>
-      </DocumentProvider>
-    </AuthProvider>
+              <Route path="/document/:id" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
+            </Routes>
+          </BrowserRouter>
+        </DocumentProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
