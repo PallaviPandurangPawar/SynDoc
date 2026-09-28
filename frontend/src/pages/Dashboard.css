@@ -192,7 +192,7 @@
 }
 
 .menu-item.active {
-  background-color: var(--active-menu-bg);
+  background: var(--active-menu-bg);
   color: #ffbc85;
   font-weight: 500;
   box-shadow: 0 0 14px rgba(0, 0, 0, 0.35);
@@ -763,4 +763,93 @@
 
 .modal-btn-secondary:hover {
   background: rgba(255, 255, 255, 0.05);
+}
+
+/* ==========================================================================
+   Light theme overrides — colors pulled from the SyncDoc light mockup
+   ========================================================================== */
+
+.dashboard-page[data-theme="light"] {
+  --bg-app: #f2f2f0;
+  --bg-sidebar: #f2f2f0;
+  --bg-board-1: #fffdf7;
+  --bg-board-2: #fdf6e8;
+  --bg-board-dark: #f8edda;
+  --bg-search: #e6e7e7;
+  --bg-activity: rgba(255, 253, 247, 0.95);
+  --active-menu-bg: linear-gradient(90deg, #f3e2ba 0%, #fff1cd 50%, #f3e2ba 100%);
+
+  --accent-gold: #bf8520;
+  --accent-gold-glow: rgba(191, 133, 32, 0.35);
+  --accent-peach: #d99a17;
+  --accent-peach-dark: #c98708;
+  --accent-peach-glow: rgba(201, 135, 8, 0.35);
+
+  --file-card-gradient-top: #fffdf2;
+  --file-card-gradient-bot: #fcebbd;
+  --file-card-glow: rgba(201, 152, 23, 0.35);
+  --file-card-text: #25231f;
+
+  --text-white: #171c22;
+  --text-light: #353a40;
+  --text-muted: #6b6f76;
+  --text-dark: #1b1712;
+  --divider-color: #b8b8b6;
+}
+
+.dashboard-page[data-theme="light"] .dashboard-board {
+  background: linear-gradient(150deg, #fffdf7 0%, #fdf6e8 52%, #f8edda 52.1%, #f3e2ba 100%);
+}
+
+.dashboard-page[data-theme="light"] .file-card {
+  border: 1.5px solid #2a2720;
+}
+
+.dashboard-page[data-theme="light"] .search-input::placeholder {
+  color: #5a5e64;
+}
+
+.dashboard-page[data-theme="light"] .menu-item.active {
+  color: #171c22;
+}
+
+.dashboard-page[data-theme="light"] .menu-item:hover:not(.active) {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.dashboard-page[data-theme="light"] .activity-filename {
+  color: #a8631f;
+}
+
+.dashboard-page[data-theme="light"] .doc-icon svg {
+  stroke: #c98708;
+}
+
+.dashboard-page[data-theme="light"] .options-menu button.danger {
+  color: #b5451f;
+}
+
+.dashboard-page[data-theme="light"] .options-menu button:hover,
+.dashboard-page[data-theme="light"] .account-menu button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-page[data-theme="light"] .user-account-row:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-page[data-theme="light"] .nav-icon-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-page[data-theme="light"] .avatar-ring {
+  background: #eee8dc;
+}
+
+.dashboard-page[data-theme="light"] .avatar-simple {
+  background: linear-gradient(180deg, #d8d0c4 0%, #b9b0a3 100%);
+}
+
+.dashboard-page[data-theme="light"] .profile-avatar-circle {
+  background: #eee8dc;
 }
