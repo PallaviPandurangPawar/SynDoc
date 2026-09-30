@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const documentService = require('../services/documentService');
 const User = require('../models/User');
 const lockService = require('../services/lockService');
+const { sendJoinRequestEmail } = require('../services/emailService');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -532,6 +533,184 @@ const getDocumentLocks = async (req, res) => {
   }
 };
 
+// Get (or create) a document's room code. Only the owner receives the real
+// code; collaborators get roomCode: null, so the frontend shows it masked.
+const getRoomCode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await documentService.getOrCreateRoomCode(id);
+
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+
+    const isOwner = doc.owner && doc.owner.toString() === req.user._id.toString();
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        roomCode: isOwner ? doc.roomCode : null,
+        roomCodeEnabled: doc.roomCodeEnabled,
+        isOwner
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+// Owner-only: generate a brand new code, invalidating the old one
+const regenerateRoomCodeCtrl = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await documentService.regenerateRoomCode(id);
+
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Room code regenerated',
+      data: { roomCode: doc.roomCode, roomCodeEnabled: doc.roomCodeEnabled }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+// Owner-only: turn joining on or off
+const toggleRoomCode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { enabled } = req.body;
+
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'enabled (true/false) is required' });
+    }
+
+    const doc = await documentService.setRoomCodeEnabled(id, enabled);
+
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: enabled ? 'Room joining enabled' : 'Room joining disabled',
+      data: { roomCode: doc.roomCode, roomCodeEnabled: doc.roomCodeEnabled }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+// Any logged-in user: submit a code to request joining that document
+const joinByCode = async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!code || typeof code !== 'string' || !code.trim()) {
+      return res.status(400).json({ success: false, message: 'A room code is required' });
+    }
+
+    const result = await documentService.requestToJoinByCode(code, req.user._id);
+
+    if (result.status === 'not_found') {
+      return res.status(404).json({ success: false, message: 'Invalid or inactive room code' });
+    }
+    if (result.status === 'already_member') {
+      return res.status(409).json({ success: false, message: 'You already have access to this document' });
+    }
+    if (result.status === 'already_pending') {
+      return res.status(409).json({ success: false, message: 'You already requested to join this document. Waiting for approval.' });
+    }
+
+    // Email the owner with one-click Approve/Deny links — no login needed to use them
+    if (result.doc.owner?.email) {
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const approveUrl = `${baseUrl}/api/room-action/approve/${result.approveToken}`;
+      const rejectUrl = `${baseUrl}/api/room-action/reject/${result.rejectToken}`;
+
+      sendJoinRequestEmail(
+        result.doc.owner.email,
+        result.doc.owner.name,
+        result.doc.title,
+        req.user.name,
+        req.user.email,
+        approveUrl,
+        rejectUrl
+      ).catch((err) => console.error('❌ Failed to send join-request email:', err.message));
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Request sent. The document owner has been emailed and can approve it directly from there.',
+      data: { documentId: result.doc._id, title: result.doc.title }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+// Owner-only: list of people waiting to join
+const getJoinRequests = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const requests = await documentService.getPendingRequests(id);
+
+    return res.status(200).json({ success: true, data: requests });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+// Owner-only: approve someone waiting to join, making them a collaborator
+const approveJoinRequestCtrl = async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Valid userId is required' });
+    }
+
+    const updatedDoc = await documentService.approveJoinRequest(id, userId);
+
+    if (!updatedDoc) {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Request approved. They can now access this document.',
+      data: updatedDoc
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+// Owner-only: reject someone waiting to join
+const rejectJoinRequestCtrl = async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: 'Valid userId is required' });
+    }
+
+    const doc = await documentService.rejectJoinRequest(id, userId);
+
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Request rejected' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
 module.exports = {
   createDocument,
   getDocuments,
@@ -547,6 +726,13 @@ module.exports = {
   removeCollaborator,
   searchDocuments,
   getStats,
-  getDocumentLocks
+  getDocumentLocks,
+  getRoomCode,
+  regenerateRoomCodeCtrl,
+  toggleRoomCode,
+  joinByCode,
+  getJoinRequests,
+  approveJoinRequestCtrl,
+  rejectJoinRequestCtrl
 };
 
