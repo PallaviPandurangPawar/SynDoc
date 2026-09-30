@@ -631,6 +631,32 @@
   color: var(--text-muted);
 }
 
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.join-room-btn {
+  padding: 11px 22px;
+  background: transparent;
+  border: 1.5px solid var(--accent-peach-dark);
+  border-radius: 11px;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent-peach-dark);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.join-room-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(246, 133, 91, 0.1);
+}
+
+.join-room-btn:active { transform: translateY(0); }
+
 .new-doc-btn {
   padding: 11px 26px;
   background: linear-gradient(135deg, var(--accent-peach) 0%, var(--accent-peach-dark) 100%);

@@ -291,6 +291,30 @@ const DocumentSchema = new mongoose.Schema(
         ref: 'User'
       }
     ],
+    roomCode: {
+      type: String,
+      default: null, // e.g. "SYNC-7F2K", created the first time it's requested
+      index: true
+    },
+    roomCodeEnabled: {
+      type: Boolean,
+      default: false // owner turns this on/off; off = code can't be used to join
+    },
+    pendingRequests: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        requestedAt: {
+          type: Date,
+          default: Date.now
+        },
+        // One-click email approval — never expires, single-use (removed once acted on)
+        approveToken: { type: String },
+        rejectToken: { type: String }
+      }
+    ],
     isDeleted: {
       type: Boolean,
       default: false

@@ -31,4 +31,30 @@ const sendOtpEmail = async (toEmail, name, otp) => {
   });
 };
 
-module.exports = { sendOtpEmail };
+// Emails the document owner when someone requests to join by room code.
+// Includes one-click Approve/Deny links — no login required to use them.
+const sendJoinRequestEmail = async (ownerEmail, ownerName, documentTitle, requesterName, requesterEmail, approveUrl, rejectUrl) => {
+  const clean = (s) => String(s).replace(/[<>&"]/g, '');
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 1px solid #e5e5e5; border-radius: 8px;">
+      <h2 style="margin-top: 0;">Request to join "${clean(documentTitle)}"</h2>
+      <p>Hi ${clean(ownerName)},</p>
+      <p><b>${clean(requesterName)}</b> (${clean(requesterEmail)}) wants to join your document using the room code.</p>
+      <div style="margin: 24px 0; text-align: center;">
+        <a href="${approveUrl}" style="display:inline-block; padding: 12px 28px; margin: 0 8px; background: #2e7d32; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;">Approve</a>
+        <a href="${rejectUrl}" style="display:inline-block; padding: 12px 28px; margin: 0 8px; background: #c62828; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;">Deny</a>
+      </div>
+      <p style="color: #888; font-size: 12px;">One click is all it takes — no need to log in to SyncDoc.</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"SyncDoc" <${process.env.EMAIL_USER}>`,
+    to: ownerEmail,
+    subject: `${requesterName} wants to join "${documentTitle}"`,
+    text: `${requesterName} (${requesterEmail}) wants to join "${documentTitle}". Approve: ${approveUrl} Deny: ${rejectUrl}`,
+    html,
+  });
+};
+
+module.exports = { sendOtpEmail, sendJoinRequestEmail };

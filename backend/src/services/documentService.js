@@ -1,4 +1,5 @@
 const Document = require('../models/Document');
+const crypto = require('crypto');
 require('../models/User');
 
 /**
@@ -269,6 +270,194 @@ const removeCollaborator = async (id, userId) => {
     .populate('collaborators', 'name email');
 };
 
+// Makes a short, easy-to-share code like "SYNC-7F2K"
+const generateRoomCode = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I, so it's easy to read aloud
+  let code = '';
+  for (let i = 0; i < 4; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return `SYNC-${code}`;
+};
+
+/**
+ * Returns the document's room code, creating one on first use.
+ * Anyone with access to the document (owner or collaborator) can call this.
+ */
+const getOrCreateRoomCode = async (id) => {
+  const doc = await Document.findById(id);
+  if (!doc) return null;
+
+  if (!doc.roomCode) {
+    doc.roomCode = generateRoomCode();
+    await doc.save();
+  }
+
+  return doc;
+};
+
+/**
+ * Owner-only: makes a brand new code, invalidating the old one immediately.
+ */
+const regenerateRoomCode = async (id) => {
+  const doc = await Document.findById(id);
+  if (!doc) return null;
+
+  doc.roomCode = generateRoomCode();
+  await doc.save();
+
+  return doc;
+};
+
+/**
+ * Owner-only: turns joining on or off without changing the code itself.
+ */
+const setRoomCodeEnabled = async (id, enabled) => {
+  const doc = await Document.findById(id);
+  if (!doc) return null;
+
+  doc.roomCodeEnabled = enabled;
+  if (enabled && !doc.roomCode) {
+    doc.roomCode = generateRoomCode();
+  }
+  await doc.save();
+
+  return doc;
+};
+
+/**
+ * Called when someone submits a room code to join. Creates a pending
+ * request unless they're already the owner, already a collaborator,
+ * or already have a pending request on this document.
+ */
+const requestToJoinByCode = async (code, userId) => {
+  const doc = await Document.findOne({
+    roomCode: code.trim().toUpperCase(),
+    roomCodeEnabled: true,
+    isDeleted: { $ne: true }
+  }).populate('owner', 'name email');
+
+  if (!doc) {
+    return { status: 'not_found' };
+  }
+  if (doc.owner && doc.owner._id.toString() === userId.toString()) {
+    return { status: 'already_member', doc };
+  }
+  if (doc.collaborators.some((c) => c.toString() === userId.toString())) {
+    return { status: 'already_member', doc };
+  }
+  if (doc.pendingRequests.some((r) => r.user.toString() === userId.toString())) {
+    return { status: 'already_pending', doc };
+  }
+
+  const approveToken = crypto.randomBytes(24).toString('hex');
+  const rejectToken = crypto.randomBytes(24).toString('hex');
+
+  doc.pendingRequests.push({ user: userId, approveToken, rejectToken });
+  await doc.save();
+
+  return { status: 'requested', doc, approveToken, rejectToken };
+};
+
+/**
+ * Called when the owner clicks the Approve link in an email. No login is
+ * required — the long random token itself is the credential, and it can
+ * only be used once, since the request is removed after it's acted on.
+ */
+const approveByToken = async (token) => {
+  const doc = await Document.findOne({ 'pendingRequests.approveToken': token })
+    .populate('pendingRequests.user', 'name email');
+  if (!doc) {
+    return { status: 'not_found' };
+  }
+
+  const request = doc.pendingRequests.find((r) => r.approveToken === token);
+  const requesterName = request.user?.name || 'Someone';
+  const requesterId = request.user?._id;
+
+  doc.pendingRequests = doc.pendingRequests.filter((r) => r.approveToken !== token);
+
+  if (requesterId) {
+    const isAlreadyCollaborator = doc.collaborators.some(
+      (c) => c.toString() === requesterId.toString()
+    );
+    if (!isAlreadyCollaborator) {
+      doc.collaborators.push(requesterId);
+    }
+  }
+
+  await doc.save();
+
+  return { status: 'approved', documentTitle: doc.title, requesterName };
+};
+
+/**
+ * Called when the owner clicks the Deny link in an email.
+ */
+const rejectByToken = async (token) => {
+  const doc = await Document.findOne({ 'pendingRequests.rejectToken': token })
+    .populate('pendingRequests.user', 'name email');
+  if (!doc) {
+    return { status: 'not_found' };
+  }
+
+  const request = doc.pendingRequests.find((r) => r.rejectToken === token);
+  const requesterName = request.user?.name || 'Someone';
+
+  doc.pendingRequests = doc.pendingRequests.filter((r) => r.rejectToken !== token);
+  await doc.save();
+
+  return { status: 'rejected', documentTitle: doc.title, requesterName };
+};
+
+/**
+ * Owner-only: list of users waiting to be let into the document.
+ */
+const getPendingRequests = async (id) => {
+  const doc = await Document.findById(id).populate('pendingRequests.user', 'name email avatarData');
+  return doc ? doc.pendingRequests : [];
+};
+
+/**
+ * Owner-only: approve a waiting user, making them a collaborator.
+ */
+const approveJoinRequest = async (id, userId) => {
+  const doc = await Document.findById(id);
+  if (!doc) return null;
+
+  doc.pendingRequests = doc.pendingRequests.filter(
+    (r) => r.user.toString() !== userId.toString()
+  );
+
+  const isAlreadyCollaborator = doc.collaborators.some(
+    (c) => c.toString() === userId.toString()
+  );
+  if (!isAlreadyCollaborator) {
+    doc.collaborators.push(userId);
+  }
+
+  await doc.save();
+
+  return await Document.findById(id)
+    .populate('owner', 'name email')
+    .populate('collaborators', 'name email');
+};
+
+/**
+ * Owner-only: reject a waiting user without adding them.
+ */
+const rejectJoinRequest = async (id, userId) => {
+  const doc = await Document.findById(id);
+  if (!doc) return null;
+
+  doc.pendingRequests = doc.pendingRequests.filter(
+    (r) => r.user.toString() !== userId.toString()
+  );
+  await doc.save();
+
+  return doc;
+};
+
 /**
  * Lightweight content update used by the CRDT auto-save path.
  * Skips full document validation (we already validate the AST ourselves
@@ -340,5 +529,14 @@ module.exports = {
   removeCollaborator,
   patchDocumentContent,
   searchDocumentsByTitle,
-  getDocumentCount
+  getDocumentCount,
+  getOrCreateRoomCode,
+  regenerateRoomCode,
+  setRoomCodeEnabled,
+  requestToJoinByCode,
+  getPendingRequests,
+  approveJoinRequest,
+  rejectJoinRequest,
+  approveByToken,
+  rejectByToken
 };

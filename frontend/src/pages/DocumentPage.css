@@ -258,6 +258,119 @@
 
 .doc-export-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
 
+/* ---------- Room panel ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.room-panel-card {
+  width: 400px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--card-bg, #1f2024);
+  border: 1px solid var(--border-amber);
+  border-radius: 14px;
+  box-shadow: 0 0 26px var(--glow-orange);
+  padding: 22px 24px;
+  color: var(--text-color, #fff);
+}
+
+.room-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.room-panel-header h3 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 19px;
+}
+
+.room-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.room-panel-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 16px 0;
+}
+
+.room-code-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 130, 50, 0.06);
+  border: 1px solid rgba(255, 150, 70, 0.4);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.room-code-value {
+  flex: 1;
+  font-family: monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #ffaa64;
+}
+
+.room-code-copy {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #ff9d5c 0%, #ff7328 100%);
+  color: #0f1015;
+  cursor: pointer;
+}
+
+.room-code-copy:disabled { opacity: 0.5; cursor: default; }
+
+.room-panel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.room-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.room-regen-btn {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 150, 70, 0.4);
+  background: transparent;
+  color: #ffaa64;
+  cursor: pointer;
+}
+
+.room-regen-btn:hover { background: rgba(255, 130, 50, 0.1); }
+
 /* ---------- Main editor area ---------- */
 
 .doc-main {
