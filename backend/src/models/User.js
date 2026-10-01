@@ -54,6 +54,18 @@ const UserSchema = new mongoose.Schema(
       enum: ['local', 'google'],
       default: 'local', // accounts made with Continue with Google get 'google'
     },
+    resetTokenHash: {
+      type: String,
+      select: false, // only the scrambled copy of the reset link secret is stored
+    },
+    resetTokenExpires: {
+      type: Date,
+      select: false,
+    },
+    resetLastSentAt: {
+      type: Date,
+      select: false,
+    },
     isVerified: {
       type: Boolean,
     },

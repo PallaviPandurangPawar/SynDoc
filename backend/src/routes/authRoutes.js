@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, verifyOtp, resendOtp, login, googleLogin } = require('../controllers/authController');
+const { register, verifyOtp, resendOtp, login, googleLogin, forgotPassword, resetPassword } = require('../controllers/authController');
 
 // POST /api/auth/register - creates an unverified account and emails an OTP
 router.post('/register', register);
@@ -16,5 +16,11 @@ router.post('/login', login);
 
 // POST /api/auth/google - signs in (or signs up) with a Google account
 router.post('/google', googleLogin);
+
+// POST /api/auth/forgot-password - emails a password reset link
+router.post('/forgot-password', forgotPassword);
+
+// POST /api/auth/reset-password - sets a new password using the emailed link
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

@@ -2,12 +2,14 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User = require('../models/User');
-const { sendOtpEmail } = require('../services/emailService');
+const { sendOtpEmail, sendPasswordResetEmail } = require('../services/emailService');
 const { OAuth2Client } = require('google-auth-library');
 
 const OTP_EXPIRY_MS = 10 * 60 * 1000;   // OTP valid for 10 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000;   // wait 60 seconds between emails
 const MAX_OTP_ATTEMPTS = 5;             // wrong guesses allowed per OTP
+const RESET_EXPIRY_MS = 60 * 60 * 1000; // password reset link valid for 1 hour
+const RESET_COOLDOWN_MS = 60 * 1000;    // one reset email per minute per account
 
 // Generates a signed login token for a given user ID, valid for 7 days
 const generateToken = (userId) => {
@@ -447,4 +449,126 @@ const googleLogin = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyOtp, resendOtp, login, googleLogin };
+// POST /api/auth/forgot-password
+// Emails a one-time reset link. The answer is always the same, whether or not the
+// email is registered, so nobody can use this form to find out who has an account.
+const forgotPassword = async (req, res) => {
+  const sameAnswer = {
+    success: true,
+    message: 'If an account with that email exists, we have sent a password reset link.'
+  };
+
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
+      .select('+resetLastSentAt');
+
+    if (!user) {
+      return res.status(200).json(sameAnswer);
+    }
+
+    // Only one email per minute (answered silently, with the same message)
+    if (user.resetLastSentAt && Date.now() - user.resetLastSentAt.getTime() < RESET_COOLDOWN_MS) {
+      return res.status(200).json(sameAnswer);
+    }
+
+    // The email gets the random secret; the database only keeps a scrambled (hashed) copy
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    user.resetTokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    user.resetTokenExpires = new Date(Date.now() + RESET_EXPIRY_MS);
+    user.resetLastSentAt = new Date();
+    await user.save();
+
+    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+    const resetUrl = `${clientUrl}/reset-password?token=${rawToken}`;
+
+    try {
+      await sendPasswordResetEmail(user.email, user.name, resetUrl);
+    } catch (mailError) {
+      console.error('❌ Failed to send password reset email:', mailError.message);
+    }
+
+    return res.status(200).json(sameAnswer);
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// POST /api/auth/reset-password
+// Checks the link's secret and sets the new password. The link works only once.
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset link and new password are required'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters'
+      });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(String(token)).digest('hex');
+
+    const user = await User.findOne({
+      resetTokenHash: tokenHash,
+      resetTokenExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'This reset link is invalid or has expired. Please request a new one.'
+      });
+    }
+
+    user.password = password; // hashed automatically on save
+
+    // Google-only accounts can now also log in with this password (Google still works)
+    user.authProvider = 'local';
+
+    // Receiving the email proves the address is theirs, so an unverified account becomes verified
+    if (user.isVerified === false) {
+      user.isVerified = true;
+      user.otpHash = undefined;
+      user.otpExpires = undefined;
+      user.otpAttempts = 0;
+      user.otpLastSentAt = undefined;
+    }
+
+    // Use up the link so it can't be used again
+    user.resetTokenHash = undefined;
+    user.resetTokenExpires = undefined;
+    user.resetLastSentAt = undefined;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password changed successfully. Please log in with your new password.'
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+module.exports = { register, verifyOtp, resendOtp, login, googleLogin, forgotPassword, resetPassword };

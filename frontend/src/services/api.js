@@ -33,6 +33,8 @@ export const verifyOtp = async ({ email, otp }) => (await api.post('/auth/verify
 export const resendOtp = async ({ email }) => (await api.post('/auth/resend-otp', { email })).data;
 export const loginUser = async ({ email, password }) => (await api.post('/auth/login', { email, password })).data;
 export const googleLogin = async (code) => (await api.post('/auth/google', { code })).data;
+export const forgotPassword = async (email) => (await api.post('/auth/forgot-password', { email })).data;
+export const resetPassword = async (token, password) => (await api.post('/auth/reset-password', { token, password })).data;
 
 // Room code (collaboration by code)
 export const getRoomCode = async (id) => (await api.get(`/documents/${id}/room-code`)).data;

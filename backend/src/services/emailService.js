@@ -57,4 +57,29 @@ const sendJoinRequestEmail = async (ownerEmail, ownerName, documentTitle, reques
   });
 };
 
-module.exports = { sendOtpEmail, sendJoinRequestEmail };
+// Emails a password reset link (valid for 1 hour)
+const sendPasswordResetEmail = async (toEmail, name, resetUrl) => {
+  const clean = (s) => String(s).replace(/[<>&"]/g, '');
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 460px; margin: 0 auto; padding: 24px; border: 1px solid #e5e5e5; border-radius: 8px;">
+      <h2 style="margin-top: 0;">Reset your SyncDoc password</h2>
+      <p>Hi ${clean(name)},</p>
+      <p>We received a request to reset your password. Click the button below to choose a new one:</p>
+      <div style="margin: 24px 0; text-align: center;">
+        <a href="${resetUrl}" style="display:inline-block; padding: 12px 28px; background: #2196ff; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;">Change password</a>
+      </div>
+      <p>This link works once and expires in <b>1 hour</b>.</p>
+      <p style="color: #888; font-size: 12px;">If you didn't ask for this, you can ignore this email. Your password will not change.</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"SyncDoc" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject: 'Reset your SyncDoc password',
+    text: `Reset your SyncDoc password using this link (valid for 1 hour): ${resetUrl}`,
+    html,
+  });
+};
+
+module.exports = { sendOtpEmail, sendJoinRequestEmail, sendPasswordResetEmail };

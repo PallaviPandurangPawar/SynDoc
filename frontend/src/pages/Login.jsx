@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
-import { loginUser, googleLogin } from '../services/api';
+import { loginUser, googleLogin, forgotPassword } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../components/Layout/AuthLayout';
 
@@ -23,6 +23,34 @@ export default function Login() {
   const navigate = useNavigate();
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  // "Forgot password?" popup
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
+  const [forgotError, setForgotError] = useState('');
+
+  const openForgot = () => {
+    setForgotEmail(email); // reuse the email they already typed, if any
+    setForgotMessage('');
+    setForgotError('');
+    setShowForgot(true);
+  };
+
+  const handleForgot = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotMessage('');
+    setForgotLoading(true);
+    try {
+      const res = await forgotPassword(forgotEmail);
+      setForgotMessage(res.message);
+    } catch (err) {
+      setForgotError(err.response?.data?.message || 'Could not send the email. Please try again.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
   // Opens Google's popup. On success Google gives us a one-time code, and our backend checks it.
   const handleGoogle = useGoogleLogin({
     flow: 'auth-code',
@@ -74,6 +102,7 @@ export default function Login() {
         </button>
       </form>
 
+      <button type="button" className="auth-forgot-link" onClick={openForgot}>Forgot password?</button>
       <div className="auth-divider"><span>or</span></div>
       <button type="button" className="auth-google-btn" onClick={() => handleGoogle()} disabled={googleLoading}>
         <GoogleIcon />
@@ -82,6 +111,26 @@ export default function Login() {
       <p className="auth-footer">
         Don't have an account? <Link to="/register">Sign up</Link>
       </p>
+            {showForgot && (
+        <div className="auth-modal-overlay" onClick={() => setShowForgot(false)}>
+          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="auth-modal-close" onClick={() => setShowForgot(false)} aria-label="Close">✕</button>
+            <h2 className="auth-modal-title">Forgot your password?</h2>
+            <p className="auth-modal-text">Enter your email and we'll send you a link to choose a new password.</p>
+            <form onSubmit={handleForgot}>
+              <div className="auth-field">
+                <label className="auth-label">Email</label>
+                <input className="auth-input" type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required autoFocus />
+              </div>
+              {forgotError && <p className="auth-error">{forgotError}</p>}
+              {forgotMessage && <p className="auth-info">{forgotMessage}</p>}
+              <button className="auth-btn" type="submit" disabled={forgotLoading}>
+                {forgotLoading ? 'Sending...' : 'Recover password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </AuthLayout>
   );
 }
