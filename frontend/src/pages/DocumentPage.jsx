@@ -138,14 +138,14 @@ export default function DocumentPage() {
     <div className="document-page" data-theme={theme}>
       <header className="doc-header">
         <div className="doc-header-left">
-          <button className="doc-back-btn" onClick={() => navigate('/')} title="Back to Dashboard" aria-label="Back to Dashboard">
+          <button className="doc-back-btn" onClick={() => navigate('/dashboard')} title="Back to Dashboard" aria-label="Back to Dashboard">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12"></line>
               <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
           </button>
 
-          <span className="doc-logo">
+          <span className="doc-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} title="Go to home page">
             <span className="doc-logo-sync">Sync</span><span className="doc-logo-doc">Doc</span>
           </span>
 

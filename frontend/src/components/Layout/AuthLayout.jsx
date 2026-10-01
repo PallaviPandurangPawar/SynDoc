@@ -1,5 +1,6 @@
 // Shared shell for Login, Register and OTP screens: top bar + centered card. No sidebar.
 import { useTheme } from '../../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 import '../../pages/Auth.css';
 
 const SunIcon = () => (
@@ -24,11 +25,12 @@ const MoonIcon = () => (
 
 export default function AuthLayout({ title, children }) {
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
 
   return (
     <div className="auth-page" data-theme={theme}>
       <header className="auth-header">
-        <div className="auth-logo">
+        <div className="auth-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} title="Go to home page">
           <span className="auth-logo-sync">Sync</span>
           <span className="auth-logo-doc">Doc</span>
         </div>

@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import DocumentPage from './pages/DocumentPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import LandingPage from './pages/LandingPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -26,16 +27,18 @@ function App() {
         <DocumentProvider>
           <BrowserRouter>
             <Routes>
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
 
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/trash" element={<Trash />} />
                 <Route path="/profile" element={<Profile />} />
               </Route>
 
               <Route path="/document/:id" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>
         </DocumentProvider>

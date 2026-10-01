@@ -154,10 +154,10 @@ export default function Dashboard() {
         {filteredDocuments.length === 0 ? (
           <p className="no-results">No documents found.</p>
         ) : (
-          filteredDocuments.map((doc) => (
+          filteredDocuments.map((doc, index) => (
             <div
               key={doc._id}
-              className="file-card"
+              className={`file-card accent-${index % 4}`}
               onClick={() => navigate(`/document/${doc._id}`)}
               style={{ zIndex: openMenuId === doc._id ? 30 : 'auto' }}
             >
@@ -195,9 +195,9 @@ export default function Dashboard() {
               recentActivity.map((doc, index) => (
                 <div key={doc._id}>
                   {index > 0 && <div className="item-divider"></div>}
-                  <div className="activity-item" onClick={() => navigate(`/document/${doc._id}`)}>
+                  <div className={`activity-item accent-${index % 4}`} onClick={() => navigate(`/document/${doc._id}`)}>
                     <div className="doc-icon">
-                      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#e88d67" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                         <line x1="16" y1="13" x2="8" y2="13"></line>

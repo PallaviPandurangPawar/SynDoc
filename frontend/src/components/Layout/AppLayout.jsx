@@ -8,10 +8,10 @@ import '../../pages/Dashboard.css';
 
 export default function AppLayout() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
 
   const isActive = (path) => location.pathname === path;
 
@@ -23,7 +23,7 @@ export default function AppLayout() {
   return (
     <div className="dashboard-page" data-theme={theme} onClick={() => setAccountMenuOpen(false)}>
       <header className="top-nav">
-        <div className="logo">
+        <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} title="Go to home page">
           <span className="logo-sync">Sync</span><span className="logo-doc">Doc</span>
         </div>
         <div className="top-nav-actions">
@@ -121,12 +121,12 @@ export default function AppLayout() {
 
           <nav className="sidebar-menu">
             <button
-              className={`menu-item${isActive('/') ? ' active' : ''}`}
-              onClick={() => navigate('/')}
+              className={`menu-item${isActive('/dashboard') ? ' active' : ''}`}
+              onClick={() => navigate('/dashboard')}
             >
-              {isActive('/') && <span className="active-indicator-left"></span>}
+              {isActive('/dashboard') && <span className="active-indicator-left"></span>}
               <span className="menu-text">Dashboard</span>
-              {isActive('/') && <span className="active-indicator-right"></span>}
+              {isActive('/dashboard') && <span className="active-indicator-right"></span>}
             </button>
             <button
               className={`menu-item${isActive('/profile') ? ' active' : ''}`}
