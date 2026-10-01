@@ -15,7 +15,14 @@ const {
   removeCollaborator,
   searchDocuments,
   getStats,
-  getDocumentLocks
+  getDocumentLocks,
+  getRoomCode,
+  regenerateRoomCodeCtrl,
+  toggleRoomCode,
+  joinByCode,
+  getJoinRequests,
+  approveJoinRequestCtrl,
+  rejectJoinRequestCtrl
 } = require('../controllers/documentController');
 const { validateAST } = require('../middlewares/validateAST');
 const { protect } = require('../middlewares/auth');
@@ -35,6 +42,10 @@ router.get('/trash', getTrash);
 router.patch('/:id/restore', restoreDocument);
 router.delete('/:id/permanent', permanentlyDeleteDocument);
 
+// Join-by-code — must also be registered BEFORE '/:id', since this takes a
+// room code in the body, not a document id in the URL.
+router.post('/join', joinByCode);
+
 // All document-scoped routes require membership. Destructive or sharing actions
 // add the owner-only middleware below.
 router.use('/:id', requireDocumentAccess);
@@ -50,6 +61,15 @@ router.post('/:id/duplicate', duplicateDocument);
 router.get('/:id/history', getDocumentHistory);
 router.post('/:id/collaborators', requireDocumentOwner, addCollaborator);
 router.delete('/:id/collaborators/:userId', requireDocumentOwner, removeCollaborator);
+
+// Room code — anyone with document access can view it (per your requirement);
+// only the owner can regenerate/toggle it or manage who's waiting to join.
+router.get('/:id/room-code', getRoomCode);
+router.post('/:id/room-code/regenerate', requireDocumentOwner, regenerateRoomCodeCtrl);
+router.patch('/:id/room-code/toggle', requireDocumentOwner, toggleRoomCode);
+router.get('/:id/join-requests', requireDocumentOwner, getJoinRequests);
+router.post('/:id/join-requests/:userId/approve', requireDocumentOwner, approveJoinRequestCtrl);
+router.post('/:id/join-requests/:userId/reject', requireDocumentOwner, rejectJoinRequestCtrl);
 
 // Real-time block-locking status
 router.get('/:id/locks', getDocumentLocks);

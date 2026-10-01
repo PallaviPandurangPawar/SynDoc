@@ -1,7 +1,7 @@
 // Document editor page — full-screen, outside AppLayout
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getDocumentById, updateDocument } from '../services/api';
+import { getDocumentById, updateDocument, getRoomCode, regenerateRoomCode, toggleRoomCode } from '../services/api';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -23,7 +23,16 @@ export default function DocumentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [ownerId, setOwnerId] = useState(null);
+  const [showRoomPanel, setShowRoomPanel] = useState(false);
+  const [roomCode, setRoomCode] = useState('');
+  const [roomEnabled, setRoomEnabled] = useState(false);
+  const [roomLoading, setRoomLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const titleRef = useRef(null);
+
+  const isOwner = user?.id && ownerId && user.id === ownerId;
+
 
   useEffect(() => { loadDocument(); }, [id]);
 
@@ -32,10 +41,59 @@ export default function DocumentPage() {
       setLoading(true);
       const res = await getDocumentById(id);
       setTitle(res.data?.title || 'Untitled Document');
+      setOwnerId(res.data?.owner?._id || res.data?.owner || null);
     } catch {
       setError('Could not load this document. Is the backend running on port 5000?');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Loads the room code + (if owner) the pending join requests
+  const loadRoomInfo = async () => {
+    try {
+      const res = await getRoomCode(id);
+      setRoomCode(res.data.roomCode);
+      setRoomEnabled(res.data.roomCodeEnabled);
+    } catch {
+      // non-critical
+    }
+  };
+
+  const handleOpenRoomPanel = () => {
+    setShowRoomPanel(true);
+    loadRoomInfo();
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(roomCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleToggleRoom = async () => {
+    setRoomLoading(true);
+    try {
+      const res = await toggleRoomCode(id, !roomEnabled);
+      setRoomEnabled(res.data.roomCodeEnabled);
+      setRoomCode(res.data.roomCode);
+    } catch {
+      alert('Could not update the room setting.');
+    } finally {
+      setRoomLoading(false);
+    }
+  };
+
+  const handleRegenerateCode = async () => {
+    setRoomLoading(true);
+    try {
+      const res = await regenerateRoomCode(id);
+      setRoomCode(res.data.roomCode);
+      setRoomEnabled(res.data.roomCodeEnabled);
+    } catch {
+      alert('Could not regenerate the code.');
+    } finally {
+      setRoomLoading(false);
     }
   };
 
@@ -80,14 +138,14 @@ export default function DocumentPage() {
     <div className="document-page" data-theme={theme}>
       <header className="doc-header">
         <div className="doc-header-left">
-          <button className="doc-back-btn" onClick={() => navigate('/')} title="Back to Dashboard" aria-label="Back to Dashboard">
+          <button className="doc-back-btn" onClick={() => navigate('/dashboard')} title="Back to Dashboard" aria-label="Back to Dashboard">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12"></line>
               <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
           </button>
 
-          <span className="doc-logo">
+          <span className="doc-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} title="Go to home page">
             <span className="doc-logo-sync">Sync</span><span className="doc-logo-doc">Doc</span>
           </span>
 
@@ -149,12 +207,58 @@ export default function DocumentPage() {
             <span className="doc-collab-count">{otherUsers.length + 1} online</span>
           </div>
 
+          <button className="doc-export-btn outline" onClick={handleOpenRoomPanel}>
+            Room
+          </button>
+
           <div className="doc-export-group">
             <button className="doc-export-btn outline" onClick={() => handleExport('html')} disabled={exporting}>HTML</button>
             <button className="doc-export-btn solid" onClick={() => handleExport('pdf')} disabled={exporting}>PDF</button>
           </div>
         </div>
       </header>
+
+      {showRoomPanel && (
+        <div className="modal-overlay" onClick={() => setShowRoomPanel(false)}>
+          <div className="room-panel-card" onClick={(e) => e.stopPropagation()}>
+            <div className="room-panel-header">
+              <h3>Room Code</h3>
+              <button className="room-panel-close" onClick={() => setShowRoomPanel(false)}>✕</button>
+            </div>
+
+            <p className="room-panel-subtitle">
+              Anyone with this code can request to join this document. You'll get an email
+              with one-click Approve/Deny links — no need to check back here.
+            </p>
+
+            <div className="room-code-row">
+              <span className="room-code-value">
+                {roomCode ? roomCode : (isOwner ? '...' : 'XXXX-XXXX')}
+              </span>
+              <button className="room-code-copy" onClick={handleCopyCode} disabled={!roomCode}>
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            {!isOwner && (
+              <p className="room-panel-subtitle" style={{ margin: '8px 0 0 0' }}>
+                Only the document owner can view and share this code.
+              </p>
+            )}
+
+            {isOwner && (
+              <div className="room-panel-controls">
+                <label className="room-toggle">
+                  <input type="checkbox" checked={roomEnabled} onChange={handleToggleRoom} disabled={roomLoading} />
+                  <span>Joining {roomEnabled ? 'enabled' : 'disabled'}</span>
+                </label>
+                <button className="room-regen-btn" onClick={handleRegenerateCode} disabled={roomLoading}>
+                  Regenerate code
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <main className="doc-main">
         <EditorCanvas documentId={id} socket={socket} activeUsers={activeUsers} updateCursor={updateCursor} />

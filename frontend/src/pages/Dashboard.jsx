@@ -1,7 +1,7 @@
 // Document list / dashboard page — renders inside AppLayout's <Outlet />
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDocuments, createDocument, deleteDocument, updateDocument } from '../services/api';
+import { getDocuments, createDocument, deleteDocument, updateDocument, joinRoomByCode } from '../services/api';
 import Loader from '../components/Loader/Loader';
 
 function formatTime(dateString) {
@@ -25,6 +25,10 @@ export default function Dashboard() {
   const [deleteModal, setDeleteModal] = useState(null); // { id, title }
   const [renameModal, setRenameModal] = useState(null); // { id, currentTitle, newTitle }
   const [resultModal, setResultModal] = useState(null); // { message: string }
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => { loadDocuments(); }, []);
@@ -44,6 +48,28 @@ export default function Dashboard() {
   const handleCreate = () => {
     setNewDocTitle('');
     setShowCreateModal(true);
+  };
+
+  const handleJoinRoom = () => {
+    setJoinCode('');
+    setJoinError('');
+    setShowJoinModal(true);
+  };
+
+  const confirmJoinRoom = async () => {
+    const code = joinCode.trim();
+    if (!code) return;
+    setJoinLoading(true);
+    setJoinError('');
+    try {
+      const res = await joinRoomByCode(code);
+      setShowJoinModal(false);
+      setResultModal({ type: 'success', message: `Request sent for "${res.data.title}". You'll get access once the owner approves it.` });
+    } catch (err) {
+      setJoinError(err.response?.data?.message || 'Could not join with that code.');
+    } finally {
+      setJoinLoading(false);
+    }
   };
 
   const handleConfirmCreate = async () => {
@@ -70,7 +96,7 @@ export default function Dashboard() {
       await deleteDocument(id);
       setDocuments((prev) => prev.filter((doc) => doc._id !== id));
     } catch {
-      setResultModal({ message: 'Failed to delete document.' });
+      setResultModal({ type: 'error', message: 'Failed to delete document.' });
     }
   };
 
@@ -88,7 +114,7 @@ export default function Dashboard() {
       await updateDocument(id, { title: trimmed });
       setDocuments((prev) => prev.map((doc) => (doc._id === id ? { ...doc, title: trimmed } : doc)));
     } catch {
-      setResultModal({ message: 'Failed to rename document.' });
+      setResultModal({ type: 'error', message: 'Failed to rename document.' });
     }
   };
 
@@ -128,10 +154,10 @@ export default function Dashboard() {
         {filteredDocuments.length === 0 ? (
           <p className="no-results">No documents found.</p>
         ) : (
-          filteredDocuments.map((doc) => (
+          filteredDocuments.map((doc, index) => (
             <div
               key={doc._id}
-              className="file-card"
+              className={`file-card accent-${index % 4}`}
               onClick={() => navigate(`/document/${doc._id}`)}
               style={{ zIndex: openMenuId === doc._id ? 30 : 'auto' }}
             >
@@ -169,9 +195,9 @@ export default function Dashboard() {
               recentActivity.map((doc, index) => (
                 <div key={doc._id}>
                   {index > 0 && <div className="item-divider"></div>}
-                  <div className="activity-item" onClick={() => navigate(`/document/${doc._id}`)}>
+                  <div className={`activity-item accent-${index % 4}`} onClick={() => navigate(`/document/${doc._id}`)}>
                     <div className="doc-icon">
-                      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#e88d67" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                         <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -191,9 +217,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <button className="new-doc-btn" onClick={handleCreate}>
-          + New Document
-        </button>
+        <div className="dashboard-actions">
+          <button className="join-room-btn" onClick={handleJoinRoom}>
+            Join Room
+          </button>
+          <button className="new-doc-btn" onClick={handleCreate}>
+            + New Document
+          </button>
+        </div>
       </div>
 
       {showCreateModal && (
@@ -212,6 +243,33 @@ export default function Dashboard() {
             <div className="modal-actions">
               <button className="modal-btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
               <button className="modal-btn-primary" onClick={handleConfirmCreate}>Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showJoinModal && (
+        <div className="modal-overlay" onClick={() => setShowJoinModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Join a Room</h3>
+            <p style={{ color: 'var(--text-light)', fontFamily: 'var(--font-sans)', fontSize: '14px', margin: '0 0 12px 0' }}>
+              Enter the room code someone shared with you. The owner will need to approve your request.
+            </p>
+            <input
+              type="text"
+              className="modal-input"
+              placeholder="e.g. SYNC-7F2K"
+              value={joinCode}
+              autoFocus
+              onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') confirmJoinRoom(); }}
+            />
+            {joinError && <p style={{ color: '#e07a5f', fontSize: '13px', margin: '8px 0 0 0' }}>{joinError}</p>}
+            <div className="modal-actions">
+              <button className="modal-btn-secondary" onClick={() => setShowJoinModal(false)}>Cancel</button>
+              <button className="modal-btn-primary" onClick={confirmJoinRoom} disabled={joinLoading}>
+                {joinLoading ? 'Joining...' : 'Join'}
+              </button>
             </div>
           </div>
         </div>
@@ -256,7 +314,9 @@ export default function Dashboard() {
       {resultModal && (
         <div className="modal-overlay" onClick={() => setResultModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title" style={{ color: '#e07a5f' }}>Something went wrong</h3>
+            <h3 className="modal-title" style={{ color: resultModal.type === 'success' ? '#4caf82' : '#e07a5f' }}>
+              {resultModal.type === 'success' ? 'Success' : 'Something went wrong'}
+            </h3>
             <p style={{ color: 'var(--text-light)', fontFamily: 'var(--font-sans)', fontSize: '14px', margin: '0 0 4px 0' }}>
               {resultModal.message}
             </p>

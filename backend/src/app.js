@@ -5,6 +5,7 @@ const documentRoutes = require('./routes/documentRoutes');
 const exportRoutes = require('./routes/exportRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const roomActionRoutes = require('./routes/roomActionRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/room-action', roomActionRoutes);
 
 // 404 Handler
 app.use((req, res) => {

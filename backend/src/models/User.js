@@ -44,6 +44,16 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: '', // Base64 data URL of the uploaded profile photo
     },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true, // lets many normal accounts exist without a googleId
+    },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local', // accounts made with Continue with Google get 'google'
+    },
     isVerified: {
       type: Boolean,
     },
