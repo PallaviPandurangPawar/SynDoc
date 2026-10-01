@@ -297,3 +297,68 @@
 .auth-google-btn + .auth-footer {
   margin-top: 22px;
 }
+
+
+/* ---------- Forgot password link and popup ---------- */
+.auth-forgot-link {
+  display: block;
+  margin: 14px auto 0;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--link);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.auth-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 10, 31, 0.65);
+  backdrop-filter: blur(3px);
+}
+
+.auth-modal {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  padding: 28px 30px 26px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: 0 0 26px var(--card-glow);
+}
+
+.auth-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.auth-modal-title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-main);
+}
+
+.auth-modal-text {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--text-muted);
+}
