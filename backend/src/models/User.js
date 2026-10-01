@@ -44,6 +44,26 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: '', // Base64 data URL of the uploaded profile photo
     },
+    isVerified: {
+      type: Boolean,
+    },
+    otpHash: {
+      type: String,
+      select: false,
+    },
+    otpExpires: {
+      type: Date,
+      select: false,
+    },
+    otpAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    otpLastSentAt: {
+      type: Date,
+      select: false,
+    },
   },
   { timestamps: true }
 );

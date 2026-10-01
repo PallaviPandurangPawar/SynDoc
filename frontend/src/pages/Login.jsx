@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import AuthLayout from '../components/Layout/AuthLayout';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -27,25 +28,24 @@ export default function Login() {
   };
 
   return (
-    <div style={{ maxWidth: '360px', margin: '80px auto', padding: '24px' }}>
-      <h1>SyncDoc Login</h1>
+    <AuthLayout title="Login to SyncDoc">
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '12px' }}>
-          <label>Email</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: '100%', padding: '8px' }} />
+        <div className="auth-field">
+          <label className="auth-label">Email</label>
+          <input className="auth-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
-        <div style={{ marginBottom: '12px' }}>
-          <label>Password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ width: '100%', padding: '8px' }} />
+        <div className="auth-field">
+          <label className="auth-label">Password</label>
+          <input className="auth-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: '10px' }}>
+        {error && <p className="auth-error">{error}</p>}
+        <button className="auth-btn" type="submit" disabled={loading}>
           {loading ? 'Logging in...' : 'Log In'}
         </button>
       </form>
-      <p style={{ marginTop: '16px' }}>
+      <p className="auth-footer">
         Don't have an account? <Link to="/register">Sign up</Link>
       </p>
-    </div>
+    </AuthLayout>
   );
 }

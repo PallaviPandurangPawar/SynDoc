@@ -29,6 +29,8 @@ export const getProfile = async () => (await api.get('/users/me')).data;
 export const updateProfile = async (payload) => (await api.put('/users/me', payload)).data;
 
 export const registerUser = async ({ name, email, password }) => (await api.post('/auth/register', { name, email, password })).data;
+export const verifyOtp = async ({ email, otp }) => (await api.post('/auth/verify-otp', { email, otp })).data;
+export const resendOtp = async ({ email }) => (await api.post('/auth/resend-otp', { email })).data;
 export const loginUser = async ({ email, password }) => (await api.post('/auth/login', { email, password })).data;
 
 export default api;
