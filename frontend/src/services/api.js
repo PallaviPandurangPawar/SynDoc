@@ -32,6 +32,7 @@ export const registerUser = async ({ name, email, password }) => (await api.post
 export const verifyOtp = async ({ email, otp }) => (await api.post('/auth/verify-otp', { email, otp })).data;
 export const resendOtp = async ({ email }) => (await api.post('/auth/resend-otp', { email })).data;
 export const loginUser = async ({ email, password }) => (await api.post('/auth/login', { email, password })).data;
+export const googleLogin = async (code) => (await api.post('/auth/google', { code })).data;
 
 // Room code (collaboration by code)
 export const getRoomCode = async (id) => (await api.get(`/documents/${id}/room-code`)).data;
