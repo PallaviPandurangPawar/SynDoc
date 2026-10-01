@@ -131,6 +131,16 @@ socket.emit('join-document', { docId: 'doc-123' });
   assert(checkList.children[0].attributes.checked === true, 'Task 1 is checked (true)');
   assert(checkList.children[1].attributes.checked === false, 'Task 2 is unchecked (false)');
 
+  const mixedListAst = markdownToAst('- Bullet item\n1. Ordered item\n- [x] Finished\n- [ ] Upcoming');
+  assert(mixedListAst.children.length === 3, 'Adjacent mixed list types remain separate blocks');
+  assert(mixedListAst.children[0].attributes.listType === 'bullet', 'Mixed input preserves bullet list type');
+  assert(mixedListAst.children[1].attributes.listType === 'ordered', 'Mixed input preserves ordered list type');
+  assert(mixedListAst.children[2].attributes.listType === 'check', 'Mixed input preserves checklist type');
+  assert(
+    astToMarkdown(mixedListAst) === '- Bullet item\n\n1. Ordered item\n\n- [x] Finished\n- [ ] Upcoming',
+    'Mixed list types survive Markdown export'
+  );
+
   const listValidation = validateASTStructure(listAst);
   assert(listValidation.valid, 'Lists AST passes validateASTStructure()');
 

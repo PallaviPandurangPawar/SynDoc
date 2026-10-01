@@ -285,7 +285,9 @@ function markdownToAst(markdown = '') {
 
     if (bulletMatch || orderedMatch) {
       const isOrdered = Boolean(orderedMatch);
-      const listType = isOrdered ? 'ordered' : 'bullet';
+      const firstItemText = bulletMatch ? bulletMatch[1] : orderedMatch[2];
+      const firstItemIsChecklist = /^\[([ xX])\]\s+/.test(firstItemText);
+      const listType = isOrdered ? 'ordered' : firstItemIsChecklist ? 'check' : 'bullet';
       const listNode = {
         nodeId: generateNodeId(),
         type: 'list',
@@ -303,15 +305,17 @@ function markdownToAst(markdown = '') {
         if (!curBullet && !curOrdered) break;
 
         let rawItemText = curBullet ? curBullet[1] : curOrdered[2];
+        const checkMatch = rawItemText.match(/^\[([ xX])\]\s+(.*)$/);
+        const currentListType = curOrdered ? 'ordered' : checkMatch ? 'check' : 'bullet';
+        if (currentListType !== listType) break;
+
         let isChecked = undefined;
         let itemType = 'listItem';
 
         // Check for task checklist: [ ] or [x]
-        const checkMatch = rawItemText.match(/^\[([ xX])\]\s+(.*)$/);
         if (checkMatch) {
           isChecked = checkMatch[1].toLowerCase() === 'x';
           rawItemText = checkMatch[2];
-          listNode.attributes.listType = 'check';
         }
 
         const itemInlines = parseInlineContent(rawItemText);
