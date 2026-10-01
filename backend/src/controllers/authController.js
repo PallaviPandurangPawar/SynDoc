@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { sendOtpEmail } = require('../services/emailService');
+const { OAuth2Client } = require('google-auth-library');
 
 const OTP_EXPIRY_MS = 10 * 60 * 1000;   // OTP valid for 10 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000;   // wait 60 seconds between emails
@@ -276,6 +277,13 @@ const login = async (req, res) => {
     }
 
     const isMatch = await user.comparePassword(password);
+    // Accounts created with "Continue with Google" have no real password
+    if (user.authProvider === 'google') {
+      return res.status(400).json({
+        success: false,
+        message: 'This account uses Google sign-in. Please use "Continue with Google".'
+      });
+    }
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -315,4 +323,128 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyOtp, resendOtp, login };
+// POST /api/auth/google
+// Receives the one-time "code" from Google's popup and checks it directly with Google.
+// Then it logs the user in, creating the account if needed. No OTP is required because
+// Google has already verified the email address.
+const googleLogin = async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google sign-in code is missing'
+      });
+    }
+
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      return res.status(500).json({
+        success: false,
+        message: 'Google sign-in is not set up on the server yet'
+      });
+    }
+
+    // 'postmessage' is the redirect value Google uses for its popup sign-in
+    const googleClient = new OAuth2Client(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      'postmessage'
+    );
+
+    let payload;
+    try {
+      const { tokens } = await googleClient.getToken(code);
+      const ticket = await googleClient.verifyIdToken({
+        idToken: tokens.id_token,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+      payload = ticket.getPayload();
+    } catch (googleError) {
+      console.error('❌ Google sign-in failed:', googleError.message);
+      return res.status(401).json({
+        success: false,
+        message: 'Google sign-in failed. Please try again.'
+      });
+    }
+
+    if (!payload || !payload.email || !payload.email_verified) {
+      return res.status(401).json({
+        success: false,
+        message: 'Your Google email address is not verified'
+      });
+    }
+
+    const email = payload.email.toLowerCase().trim();
+    const googleId = payload.sub;
+    const picture = payload.picture || '';
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // New person: create the account right away (Google already verified the email)
+      user = new User({
+        name: (payload.name || email.split('@')[0]).trim(),
+        email,
+        // Nobody knows this password, so only Google sign-in can open this account
+        password: crypto.randomBytes(32).toString('hex'),
+        googleId,
+        authProvider: 'google',
+        isVerified: true,
+        avatarData: picture
+      });
+    } else {
+      if (user.googleId && user.googleId !== googleId) {
+        return res.status(401).json({
+          success: false,
+          message: 'This email is linked to a different Google account'
+        });
+      }
+
+      user.googleId = googleId;
+
+      if (user.isVerified === false) {
+        // Someone signed up with this email but never verified it. Google proves the
+        // real owner is here now, so throw away the unverified password and OTP.
+        user.password = crypto.randomBytes(32).toString('hex');
+        user.authProvider = 'google';
+        user.name = (payload.name || user.name).trim();
+        user.otpHash = undefined;
+        user.otpExpires = undefined;
+        user.otpAttempts = 0;
+        user.otpLastSentAt = undefined;
+      }
+      // (An already-verified password account keeps its password and gets Google as a second way in.)
+      user.isVerified = true;
+
+      // Use the Google photo only if the user has no photo yet
+      if (!user.avatarData && picture) {
+        user.avatarData = picture;
+      }
+    }
+
+    await user.save();
+
+    const token = generateToken(user._id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Signed in with Google',
+      data: {
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email
+        }
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+module.exports = { register, verifyOtp, resendOtp, login, googleLogin };

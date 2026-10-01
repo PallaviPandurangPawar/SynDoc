@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { DocumentProvider } from './context/DocumentContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import AppLayout from './components/Layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import Trash from './pages/Trash';
@@ -22,7 +23,8 @@ function ProtectedRoute({ children }) {
 
 function App() {
   return (
-    <ThemeProvider>
+            <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <ThemeProvider>
       <AuthProvider>
         <DocumentProvider>
           <BrowserRouter>
@@ -43,7 +45,8 @@ function App() {
           </BrowserRouter>
         </DocumentProvider>
       </AuthProvider>
-    </ThemeProvider>
+              </ThemeProvider>
+    </GoogleOAuthProvider>
   );
 }
 
