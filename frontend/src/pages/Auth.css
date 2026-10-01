@@ -6,21 +6,21 @@
 
 /* ── Dark theme (default) ── */
 .auth-page {
-  --bg-header: #33353b;
-  --bg-page: linear-gradient(150deg, #1c1d21 0%, #161719 52%, #101113 52.1%, #0c0d0e 100%);
-  --bg-card: #1f2024;
-  --bg-input: #3c3e45;
-  --card-border: #e29547;
-  --card-glow: rgba(226, 149, 71, 0.35);
-  --accent: #e29547;
-  --accent-peach: #fca582;
-  --accent-peach-dark: #f6855b;
-  --accent-peach-glow: rgba(246, 133, 91, 0.45);
+  --bg-header: #07122e;
+  --bg-page: linear-gradient(150deg, #0b1636 0%, #081029 52%, #030a1f 52.1%, #030a1f 100%);
+  --bg-card: #0b1836;
+  --bg-input: #121f4b;
+  --card-border: #2196ff;
+  --card-glow: rgba(33, 150, 255, 0.35);
+  --accent: #2196ff;
+  --accent-peach: #a836ff;
+  --accent-peach-dark: #277fff;
+  --accent-peach-glow: rgba(115, 55, 255, 0.45);
   --text-main: #ffffff;
-  --text-soft: #dedfe3;
-  --text-muted: #9da1ab;
-  --text-on-btn: #24201f;
-  --link: #fca582;
+  --text-soft: #dbe2f7;
+  --text-muted: #8997bd;
+  --text-on-btn: #ffffff;
+  --link: #6db7ff;
   --error: #ff8a80;
   --success: #7ddc9a;
   --font-serif: 'Playfair Display', Georgia, serif;
@@ -36,21 +36,21 @@
 
 /* ── Light theme ── */
 .auth-page[data-theme="light"] {
-  --bg-header: #f2f2f0;
-  --bg-page: linear-gradient(150deg, #fffdf7 0%, #fdf6e8 52%, #f8edda 52.1%, #f3e2ba 100%);
-  --bg-card: #fffdf7;
-  --bg-input: #f7e6c4;
-  --card-border: #bf8520;
-  --card-glow: rgba(191, 133, 32, 0.18);
-  --accent: #bf8520;
-  --accent-peach: #ffb08a;
-  --accent-peach-dark: #f6855b;
-  --accent-peach-glow: rgba(246, 133, 91, 0.35);
-  --text-main: #171c22;
-  --text-soft: #353a40;
-  --text-muted: #6b6f76;
-  --text-on-btn: #24201f;
-  --link: #a8650f;
+  --bg-header: #ffffff;
+  --bg-page: linear-gradient(150deg, #f8fbff 0%, #eef4ff 52%, #dfeaff 52.1%, #dfeaff 100%);
+  --bg-card: #ffffff;
+  --bg-input: #eef4ff;
+  --card-border: #298cff;
+  --card-glow: rgba(41, 140, 255, 0.18);
+  --accent: #298cff;
+  --accent-peach: #7b43ff;
+  --accent-peach-dark: #358df4;
+  --accent-peach-glow: rgba(91, 88, 255, 0.3);
+  --text-main: #20345e;
+  --text-soft: #445a86;
+  --text-muted: #7b88a4;
+  --text-on-btn: #ffffff;
+  --link: #298cff;
   --error: #c62828;
   --success: #1b7f3b;
 }
@@ -99,7 +99,7 @@
 }
 .auth-toggle-icon.active {
   background: var(--accent);
-  color: #1a1a18;
+  color: #ffffff;
 }
 
 /* ── Page body and card ── */

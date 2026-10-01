@@ -51,7 +51,7 @@ export default function Register() {
     try {
       const res = await verifyOtp({ email, otp });
       login(res.data.token, res.data.user);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Verification failed. Please try again.');
     } finally {
