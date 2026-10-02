@@ -7,10 +7,11 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const roomActionRoutes = require('./routes/roomActionRoutes');
 const errorHandler = require('./middlewares/errorHandler');
+const { corsOptions } = require('./config/cors');
 
 const app = express();
 
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '5mb' })); // raised from the default 100kb so a Base64 profile photo can fit
 
 // Routes

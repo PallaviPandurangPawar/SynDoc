@@ -3,12 +3,12 @@ const registerSyncHandlers = require('./syncHandler');
 const registerPresenceHandlers = require('./presenceHandler');
 const registerLockHandlers = require('./lockHandler');
 const { initWebSocket, getYDocs } = require('./websocket');
-const { authenticateToken } = require('../middlewares/auth');
+const { corsOptions } = require('../config/cors');
 
 const initSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: '*',
+      origin: corsOptions.origin,
       methods: ['GET', 'POST']
     }
   });
