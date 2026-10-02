@@ -13,6 +13,19 @@ setInterval(() => {
   crdtService.evictIdleDocs(IDLE_TTL_MS);
 }, EVICTION_INTERVAL_MS).unref(); // .unref() so this timer won't prevent process exit
 
+async function persistAndRemoveIfIdle(io, documentId) {
+  const room = io.sockets.adapter.rooms.get(documentId);
+  if (crdtService.getSocketCount(documentId) > 0 || room?.size > 0) return;
+
+  syncService.cancelPendingSave(documentId);
+  await syncService.persistNow(documentId);
+
+  const currentRoom = io.sockets.adapter.rooms.get(documentId);
+  if (crdtService.getSocketCount(documentId) === 0 && !currentRoom?.size) {
+    crdtService.removeYDoc(documentId);
+  }
+}
+
 /**
  * Registers all sync-related event listeners for a single connected socket.
  */
@@ -25,9 +38,19 @@ function registerSyncHandlers(io, socket) {
       return;
     }
 
-    if (socket.data.documentId && socket.data.documentId !== documentId) {
-      socket.leave(socket.data.documentId);
-      crdtService.decrementSocketCount(socket.data.documentId);
+    const previousDocumentId = socket.data.documentId;
+    const previousSyncDocumentId = socket.data.syncDocumentId;
+
+    if (previousDocumentId && previousDocumentId !== documentId) {
+      socket.leave(previousDocumentId);
+    }
+
+    if (previousSyncDocumentId && previousSyncDocumentId !== documentId) {
+      if (previousSyncDocumentId !== previousDocumentId) {
+        socket.leave(previousSyncDocumentId);
+      }
+      crdtService.decrementSocketCount(previousSyncDocumentId);
+      void persistAndRemoveIfIdle(io, previousSyncDocumentId);
     }
 
     socket.join(documentId);
@@ -35,7 +58,10 @@ function registerSyncHandlers(io, socket) {
 
     // Track this socket in the per-doc counter so eviction never
     // removes a Y.Doc while someone is still editing it
-    crdtService.incrementSocketCount(documentId);
+    if (previousSyncDocumentId !== documentId) {
+      crdtService.incrementSocketCount(documentId);
+      socket.data.syncDocumentId = documentId;
+    }
 
     // If this is the first person opening this document since server start,
     // load its existing content from MongoDB into the live CRDT session
@@ -51,13 +77,15 @@ function registerSyncHandlers(io, socket) {
 
   // Client leaves the document room
   socket.on('leave-document', (documentId) => {
-    const targetDocId = documentId || socket.data.documentId;
-    if (targetDocId) {
-      socket.leave(targetDocId);
-      crdtService.decrementSocketCount(targetDocId);
-      delete socket.data.documentId;
-      console.log(`📄 [Sync] Socket ${socket.id} left document: ${targetDocId} (active sockets: ${crdtService.getSocketCount(targetDocId)})`);
-    }
+    const targetDocId = documentId || socket.data.syncDocumentId;
+    if (!targetDocId || targetDocId !== socket.data.syncDocumentId) return;
+
+    socket.leave(targetDocId);
+    crdtService.decrementSocketCount(targetDocId);
+    delete socket.data.syncDocumentId;
+    if (socket.data.documentId === targetDocId) delete socket.data.documentId;
+    console.log(`📄 [Sync] Socket ${socket.id} left document: ${targetDocId} (active sockets: ${crdtService.getSocketCount(targetDocId)})`);
+    void persistAndRemoveIfIdle(io, targetDocId);
   });
 
   // Client sends a CRDT update (an edit they made locally)
@@ -72,6 +100,10 @@ function registerSyncHandlers(io, socket) {
     // Apply the update to our authoritative in-memory Y.Doc.
     // applyUpdate() also invalidates the encoded state cache.
     const applied = crdtService.applyUpdate(documentId, updateBytes);
+    if (!applied) {
+      socket.emit('sync-error', { message: 'Invalid document update' });
+      return;
+    }
 
     // Broadcast this update to everyone else editing the same document via Socket.io
     socket.to(documentId).emit('sync-update', update);
@@ -87,30 +119,19 @@ function registerSyncHandlers(io, socket) {
       console.error(`❌ [Sync] Error bridging update to WebSocket: ${err.message}`);
     }
 
-    // Schedule a debounced save back to MongoDB (only if the update was valid)
-    if (applied) {
-      syncService.schedulePersist(documentId);
-    }
+    // Schedule a debounced save back to MongoDB
+    syncService.schedulePersist(documentId);
   });
 
   // When this socket disconnects, check whether it was the last person
   // editing its document — if so, save immediately and free the Y.Doc from
   // memory, so long-running servers don't accumulate documents forever.
   socket.on('disconnect', () => {
-    const documentId = socket.data.documentId;
+    const documentId = socket.data.syncDocumentId;
     if (!documentId) return;
 
     crdtService.decrementSocketCount(documentId);
-
-    const room = io.sockets.adapter.rooms.get(documentId);
-    const remainingUsers = room ? room.size : 0;
-
-    if (remainingUsers === 0) {
-      syncService.cancelPendingSave(documentId);
-      syncService.persistNow(documentId).finally(() => {
-        crdtService.removeYDoc(documentId);
-      });
-    }
+    void persistAndRemoveIfIdle(io, documentId);
   });
 }
 

@@ -1,4 +1,5 @@
 const presenceService = require('../services/presenceService');
+const lockService = require('../services/lockService');
 const { findAccessibleDocument } = require('../middlewares/documentAccess');
 
 // Cursor updates can arrive many times per second (every key press, every
@@ -55,12 +56,25 @@ function registerPresenceHandlers(io, socket) {
   // Client announces they've joined a document with optional user info (name/color)
   socket.on('presence-join', async ({ documentId, name, color } = {}) => {
     if (!documentId) return;
-    if (socket.data.documentId && socket.data.documentId !== documentId) return;
 
     const document = await findAccessibleDocument(documentId, socket.data.user);
     if (!document) {
       socket.emit('presence-error', { message: 'You do not have access to this document' });
       return;
+    }
+
+    const previousDocumentId = socket.data.documentId;
+    if (previousDocumentId && previousDocumentId !== documentId) {
+      presenceService.removeUser(previousDocumentId, socket.id);
+      const releasedLocks = lockService.releaseAllLocksForSocket(previousDocumentId, socket.id);
+      if (releasedLocks.length > 0) {
+        io.to(previousDocumentId).emit('lock-update', lockService.getLocks(previousDocumentId));
+      }
+      io.to(previousDocumentId).emit(
+        'presence-update',
+        presenceService.getActiveUsers(previousDocumentId)
+      );
+      socket.leave(previousDocumentId);
     }
 
     // Ensure socket is joined to room and has documentId saved
@@ -108,7 +122,7 @@ function registerPresenceHandlers(io, socket) {
   // Client explicitly leaves presence for a document
   socket.on('presence-leave', ({ documentId } = {}) => {
     const targetDocId = documentId || socket.data.documentId;
-    if (!targetDocId) return;
+    if (!targetDocId || targetDocId !== socket.data.documentId) return;
 
     presenceService.removeUser(targetDocId, socket.id);
     const activeUsers = presenceService.getActiveUsers(targetDocId);
