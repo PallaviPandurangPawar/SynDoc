@@ -81,6 +81,25 @@ function renderInlines(children = []) {
  * @param {Object} node
  * @returns {string}
  */
+/**
+ * Returns the items of a list node. Uses nested children when present
+ * (Markdown import); otherwise builds items from the block text, one per line
+ * (lists typed in the editor).
+ */
+function getListItems(node, listType) {
+  if (Array.isArray(node.children) && node.children.length > 0) return node.children;
+  return String(node.content || node.text || '')
+    .split('\n')
+    .map((line) => line.trim().replace(/^([-*•]|\d+[.)])\s+/, ''))
+    .filter(Boolean)
+    .map((line) => {
+      const m = listType === 'check' ? line.match(/^\[([ xX])\]\s*(.*)$/) : null;
+      return m
+        ? { content: m[2], attributes: { checked: m[1].toLowerCase() === 'x' } }
+        : { content: line, attributes: {} };
+    });
+}
+
 function renderNode(node) {
   if (!node) return '';
 
@@ -132,7 +151,7 @@ function renderNode(node) {
         (node.attributes && node.attributes.listType) ||
         (node.attrs && node.attrs.listType) ||
         'bullet';
-      const items = Array.isArray(node.children) ? node.children : [];
+      const items = getListItems(node, listType);
 
       if (listType === 'ordered') {
         const itemHtml = items

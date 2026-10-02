@@ -1,8 +1,6 @@
-// Shares AST state across components
-// TODO: implement
-
-
-import { createContext, useContext, useState } from 'react';
+// Shares the editor's live state across components: the document structure (AST),
+// which block the user is editing, and exactly where their cursor / selection is.
+import { createContext, useContext, useMemo, useState } from 'react';
 
 // 1. Create the "box" that will hold shared data
 const DocumentContext = createContext();
@@ -10,19 +8,20 @@ const DocumentContext = createContext();
 // 2. This component provides that data to everything inside it
 export function DocumentProvider({ children }) {
   // ast = the document's structure (Abstract Syntax Tree)
-  // setAst = the function to update it
   const [ast, setAst] = useState(null);
 
-  // activeBlockId = which block the user is currently editing
+  // activeBlockId = which block (AST node) the user is currently editing
   const [activeBlockId, setActiveBlockId] = useState(null);
 
+  // localCursor = where this user's cursor or selection is:
+  // { nodeId, start, end } (start === end means a plain cursor), or null
+  const [localCursor, setLocalCursor] = useState(null);
+
   // The "value" object is what every component will be able to access
-  const value = {
-    ast,
-    setAst,
-    activeBlockId,
-    setActiveBlockId,
-  };
+  const value = useMemo(
+    () => ({ ast, setAst, activeBlockId, setActiveBlockId, localCursor, setLocalCursor }),
+    [ast, activeBlockId, localCursor]
+  );
 
   return (
     <DocumentContext.Provider value={value}>

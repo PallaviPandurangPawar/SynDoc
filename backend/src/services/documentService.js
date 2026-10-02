@@ -1,6 +1,7 @@
 const Document = require('../models/Document');
 const crypto = require('crypto');
 require('../models/User');
+const { sanitizeDocumentContent } = require('../middlewares/sanitize');
 
 /**
  * Fetch all documents with optional pagination, sorting, search filter, and AST projection
@@ -465,12 +466,18 @@ const rejectJoinRequest = async (id, userId) => {
  * subdocument schemas when replacing large content arrays via .save().
  */
 const patchDocumentContent = async (id, content) => {
+  // Security: remove XSS fragments from the blocks before they are stored
+  const safeContent = sanitizeDocumentContent(content);
+  if (JSON.stringify(safeContent) !== JSON.stringify(content)) {
+    console.warn(`🛡️ [Security] Removed unsafe markup from document ${id} before saving`);
+  }
+
   // Also updates ast.children so real-time CRDT edits stay in sync with the
   // AST tree used by the structural node-editing API — otherwise the two
   // representations silently diverge and collaborators can lose each other's work.
   return await Document.findByIdAndUpdate(
     id,
-    { $set: { content, 'ast.children': content } },
+    { $set: { content: safeContent, 'ast.children': safeContent } },
     { new: true, runValidators: false }
   );
 };

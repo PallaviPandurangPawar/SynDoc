@@ -22,8 +22,8 @@ function extractDocName(reqUrl = '') {
     } else if (pathname.startsWith('ws/')) {
       pathname = pathname.substring(3);
     }
-    const docParam = parsed.searchParams.get('room') || 
-                     parsed.searchParams.get('document') || 
+    const docParam = parsed.searchParams.get('room') ||
+                     parsed.searchParams.get('document') ||
                      parsed.searchParams.get('doc');
     return docParam || pathname || 'default-doc';
   } catch (err) {
@@ -38,28 +38,47 @@ function extractDocName(reqUrl = '') {
 function setupYjsPersistence() {
   yUtils.setPersistence({
     bindState: async (docName, ydoc) => {
-      // 1. Load initial document state from DB if needed
+      // Passes one change made by a WebSocket client on to the live server
+      // document, MongoDB saving, and the Socket.io clients in the same room.
+      const forwardUpdate = (update) => {
+        crdtService.applyUpdate(docName, update);
+        syncService.schedulePersist(docName);
+
+        // If Socket.IO is initialized, broadcast to Socket.IO clients in this room
+        if (ioInstance) {
+          ioInstance.to(docName).emit('sync-update', Array.from(update));
+        }
+      };
+
+      // 1. Start listening IMMEDIATELY. Loading the saved document from MongoDB
+      //    takes a moment, and a client can already be typing during that time.
+      //    Those early changes are kept in a queue and applied once loading is done,
+      //    so none of them are lost.
+      let ready = false;
+      const queuedUpdates = [];
+      ydoc.on('update', (update, origin) => {
+        // Avoid infinite loop if update originated from socket-io bridge
+        if (origin === 'socket-io' || origin === 'initial-sync') return;
+        if (!ready) {
+          queuedUpdates.push(update);
+          return;
+        }
+        forwardUpdate(update);
+      });
+
+      // 2. Load initial document state from DB if needed
       await syncService.loadInitialState(docName);
 
-      // 2. Sync state from crdtService's in-memory doc to y-websocket doc
+      // 3. Sync state from crdtService's in-memory doc to y-websocket doc
       const existingState = crdtService.getStateAsUpdate(docName);
       if (existingState && existingState.length > 0) {
         Y.applyUpdate(ydoc, existingState, 'initial-sync');
       }
 
-      // 3. Listen for changes made by WebSocket clients
-      ydoc.on('update', (update, origin) => {
-        // Avoid infinite loop if update originated from socket-io bridge
-        if (origin !== 'socket-io' && origin !== 'initial-sync') {
-          crdtService.applyUpdate(docName, update);
-          syncService.schedulePersist(docName);
-
-          // If Socket.IO is initialized, broadcast to Socket.IO clients in this room
-          if (ioInstance) {
-            ioInstance.to(docName).emit('sync-update', Array.from(update));
-          }
-        }
-      });
+      // 4. Now that the saved content is loaded, apply the changes that arrived meanwhile
+      ready = true;
+      queuedUpdates.forEach(forwardUpdate);
+      queuedUpdates.length = 0;
     },
     writeState: async (docName) => {
       await syncService.persistNow(docName);
@@ -69,7 +88,7 @@ function setupYjsPersistence() {
 
 /**
  * Initializes the WebSocket server and hooks it to the HTTP server.
- * @param {import('http').Server} server 
+ * @param {import('http').Server} server
  * @param {import('socket.io').Server} [io]
  */
 function initWebSocket(server, io = null) {

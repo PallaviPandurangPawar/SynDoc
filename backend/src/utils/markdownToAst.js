@@ -379,6 +379,24 @@ function markdownToAst(markdown = '') {
  * @param {Object} ast - Root ASTNode or array of ASTNodes
  * @returns {string} Markdown text
  */
+/**
+ * Returns the items of a list node. Uses nested children when present
+ * (Markdown import); otherwise builds items from the block text, one per line
+ * (lists typed in the editor).
+ */
+function getListItems(node, listType) {
+  if (Array.isArray(node.children) && node.children.length > 0) return node.children;
+  return String(node.content || node.text || '')
+    .split('\n')
+    .map((line) => line.trim().replace(/^([-*•]|\d+[.)])\s+/, ''))
+    .filter(Boolean)
+    .map((line) => {
+      const m = listType === 'check' ? line.match(/^\[([ xX])\]\s*(.*)$/) : null;
+      return m
+        ? { content: m[2], attributes: { checked: m[1].toLowerCase() === 'x' } }
+        : { content: line, attributes: {} };
+    });
+}
 function astToMarkdown(ast) {
   if (!ast) return '';
   const children = Array.isArray(ast) ? ast : Array.isArray(ast.children) ? ast.children : [];
@@ -448,7 +466,7 @@ function astToMarkdown(ast) {
       case 'list': {
         const listType =
           (node.attributes && node.attributes.listType) || 'bullet';
-        const items = Array.isArray(node.children) ? node.children : [];
+        const items = getListItems(node, listType);
         const listLines = items.map((item, idx) => {
           const text = item.content || item.text || '';
           if (listType === 'ordered') {

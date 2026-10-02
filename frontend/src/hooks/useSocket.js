@@ -1,11 +1,7 @@
-// Socket.io client hook
-// TODO: implement
-
-
+// Opens the Socket.io connection (used for presence, block locks and the sync backup route).
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-
-const SOCKET_URL = 'http://localhost:5000';
+import { SOCKET_URL } from '../config';
 
 export function useSocket() {
   const [socket, setSocket] = useState(null);

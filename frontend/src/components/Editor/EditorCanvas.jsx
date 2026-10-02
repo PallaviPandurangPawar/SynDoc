@@ -3,12 +3,24 @@ import { useEffect, useRef, useState } from 'react';
 import { useYjsSync } from '../../hooks/useYjsSync';
 import { useLocks } from '../../hooks/useLocks';
 import { useAuth } from '../../context/AuthContext';
+import { useDocument } from '../../context/DocumentContext';
+import { cursorsInBlock } from '../../lib/cursorMath';
 import Toolbar from './Toolbar';
 import Block from './Block';
 
-export default function EditorCanvas({ documentId, socket, updateCursor }) {
+// Starting attributes for each block type
+const DEFAULT_ATTRIBUTES = {
+  heading: { level: 1 },
+  code: { language: 'plaintext' },
+  list: { listType: 'bullet' },
+  callout: { calloutType: 'info' },
+  image: { src: '' }
+};
+
+export default function EditorCanvas({ documentId, socket, activeUsers, updateCursor }) {
   const { user } = useAuth();
-  const { content, addBlock, updateBlock, removeBlock } = useYjsSync(socket, documentId);
+  const { setActiveBlockId, setLocalCursor } = useDocument();
+  const { content, addBlock, updateBlock, removeBlock, transport } = useYjsSync(socket, documentId);
   const { lockBlock, unlockBlock, isLockedByOther, getLockOwner } = useLocks(socket, documentId, user?.name || 'Anonymous');
 
   // Lightweight local "Saving.../Auto-saved" indicator, mirroring the debounced
@@ -30,19 +42,19 @@ export default function EditorCanvas({ documentId, socket, updateCursor }) {
 
   const handleAddBlock = (type) => {
     const newBlock = { nodeId: crypto.randomUUID(), type, content: '' };
-    if (type === 'heading') {
-      newBlock.attributes = { level: 1 };
+    if (DEFAULT_ATTRIBUTES[type]) {
+      newBlock.attributes = { ...DEFAULT_ATTRIBUTES[type] };
     }
     addBlock(newBlock);
   };
 
-  const handleSetHeadingLevel = (index, block, level) => {
-    updateBlock(index, { ...block, attributes: { ...block.attributes, level } });
+  const handleSetAttribute = (block, key, value) => {
+    updateBlock({ ...block, attributes: { ...block.attributes, [key]: value } });
   };
 
   return (
     <div className="doc-editor-area">
-      <Toolbar onAddBlock={handleAddBlock} blockCount={content.length} saving={saving} />
+      <Toolbar onAddBlock={handleAddBlock} blockCount={content.length} saving={saving} transport={transport} />
 
       {content.length === 0 && (
         <p className="doc-empty-hint">No blocks yet — add one above to get started.</p>
@@ -60,11 +72,22 @@ export default function EditorCanvas({ documentId, socket, updateCursor }) {
             disabled={lockedByOther}
             editingLabel={lockOwner}
             isSelfEditing={isSelfEditing}
-            onFocus={() => { updateCursor({ blockIndex: index }); lockBlock(block.nodeId); }}
-            onBlur={() => unlockBlock(block.nodeId)}
-            onChange={(updated) => updateBlock(index, updated)}
-            onDelete={() => removeBlock(index)}
-            onSetHeadingLevel={(level) => handleSetHeadingLevel(index, block, level)}
+            remoteCursors={cursorsInBlock(activeUsers, block.nodeId, socket?.id)}
+            onFocus={() => { lockBlock(block.nodeId); setActiveBlockId(block.nodeId); }}
+            onBlur={() => {
+              unlockBlock(block.nodeId);
+              setActiveBlockId(null);
+              setLocalCursor(null);
+              updateCursor(null);
+            }}
+            onCursor={(start, end) => {
+              setLocalCursor({ nodeId: block.nodeId, start, end });
+              updateCursor({ blockIndex: index, nodeId: block.nodeId, start, end });
+            }}
+            onChange={(updated) => updateBlock(updated)}
+            onDelete={() => removeBlock(block.nodeId)}
+            onSetHeadingLevel={(level) => handleSetAttribute(block, 'level', level)}
+            onSetAttribute={(key, value) => handleSetAttribute(block, key, value)}
           />
         );
       })}
