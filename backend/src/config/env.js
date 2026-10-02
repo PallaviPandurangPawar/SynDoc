@@ -3,7 +3,17 @@ const dotenv = require('dotenv');
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET = 'syncdoc_super_secret_jwt_key_2024';
-}
+// Login tokens are signed with JWT_SECRET. If it is missing, short, or a value
+// that was published in the project files, anyone could forge a login token,
+// so the server refuses to start instead of silently using a weak default.
+const MIN_SECRET_LENGTH = 32;
+const PUBLISHED_SECRETS = ['syncdoc_super_secret_jwt_key_2024'];
 
+const secret = process.env.JWT_SECRET;
+if (!secret || secret.length < MIN_SECRET_LENGTH || PUBLISHED_SECRETS.includes(secret)) {
+  console.error('❌ JWT_SECRET is missing, too short (under 32 characters), or a known example value.');
+  console.error('👉 Generate one with:');
+  console.error('   node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"');
+  console.error('👉 Then put it in backend/.env as JWT_SECRET=<the generated value>');
+  process.exit(1);
+}
