@@ -1,36 +1,69 @@
-// Connects to Yjs WebSocket provider
-// TODO: implement
-
+// Keeps the editor's blocks in sync with the server through Yjs (CRDT).
+//
+// Main route:  WebSocket (y-websocket) — fast and carries only small changes.
+// Backup route: Socket.io — used automatically whenever the WebSocket is down.
+// Both routes feed the same Yjs document, and Yjs ignores duplicates, so the
+// two can never disagree.
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import { WS_URL } from '../config';
+import { addBlockToDoc, updateBlockInDoc, removeBlockFromDoc } from '../lib/yBlocks';
 
 export function useYjsSync(socket, documentId) {
-  const yDocRef = useRef(new Y.Doc());
+  const yDocRef = useRef(null);
+  if (!yDocRef.current) yDocRef.current = new Y.Doc();
+
   const [content, setContent] = useState([]);
+  const [transport, setTransport] = useState('socket.io'); // 'websocket' | 'socket.io'
 
   useEffect(() => {
-    if (!socket || !documentId) return;
+    if (!socket || !documentId) return undefined;
 
     const yDoc = yDocRef.current;
     const yArray = yDoc.getArray('content');
 
-    // Whenever the shared array changes (by us or someone else), update React state
-    const syncReactState = () => setContent(yArray.toArray());
-    yArray.observe(syncReactState);
+    // Whenever any block or any block's text changes (by us or someone else),
+    // refresh what React shows. observeDeep also reports changes inside a block's text.
+    const syncReactState = () => setContent(yArray.toJSON());
+    yArray.observeDeep(syncReactState);
 
-    // When WE make a local change, send it to the server
+    // ── Main route: Yjs WebSocket (needs the same login token as everything else) ──
+    const token = localStorage.getItem('syncdoc_token') || '';
+    const provider = new WebsocketProvider(WS_URL, documentId, yDoc, {
+      params: { token },
+      disableBc: true // all tabs go through the server so locks and saving always apply
+    });
+    const handleStatus = ({ status }) => {
+      setTransport(status === 'connected' ? 'websocket' : 'socket.io');
+    };
+    provider.on('status', handleStatus);
+
+    // ── Backup route: Socket.io ──
+    // Send our local changes over Socket.io only while the WebSocket is down
     const sendLocalUpdate = (update, origin) => {
-      if (origin === 'remote') return; // don't echo back updates that came FROM the server
+      if (origin === 'remote' || origin === provider) return; // came from the network, don't send back
+      if (provider.wsconnected) return;                       // the WebSocket provider sends it
+      if (!socket.connected) return;                          // offline: re-sent after reconnecting (see handleInit)
       socket.emit('sync-update', { documentId, update: Array.from(update) });
     };
     yDoc.on('update', sendLocalUpdate);
 
-    // Ask the server to join this document's room
-    socket.emit('join-document', documentId);
+    // Join this document's room now, and again whenever the connection comes back
+    const joinDocument = () => socket.emit('join-document', documentId);
+    if (socket.connected) joinDocument();
+    socket.on('connect', joinDocument);
 
     // Server sends the full current state when we join
     const handleInit = (stateUpdate) => {
-      Y.applyUpdate(yDoc, new Uint8Array(stateUpdate), 'remote');
+      const serverState = new Uint8Array(stateUpdate);
+      Y.applyUpdate(yDoc, serverState, 'remote');
+
+      // Send back anything we have that the server does not (edits typed while offline)
+      const missing = Y.encodeStateAsUpdate(yDoc, Y.encodeStateVectorFromUpdate(serverState));
+      if (missing.length > 2) {
+        socket.emit('sync-update', { documentId, update: Array.from(missing) });
+      }
     };
     socket.on('sync-init', handleInit);
 
@@ -41,28 +74,28 @@ export function useYjsSync(socket, documentId) {
     socket.on('sync-update', handleRemoteUpdate);
 
     return () => {
-      yArray.unobserve(syncReactState);
+      yArray.unobserveDeep(syncReactState);
+      provider.off('status', handleStatus);
+      provider.destroy();
       yDoc.off('update', sendLocalUpdate);
+      socket.off('connect', joinDocument);
       socket.off('sync-init', handleInit);
       socket.off('sync-update', handleRemoteUpdate);
     };
   }, [socket, documentId]);
 
   const addBlock = useCallback((block) => {
-    yDocRef.current.getArray('content').push([block]);
+    addBlockToDoc(yDocRef.current, block);
   }, []);
 
-  const updateBlock = useCallback((index, newBlock) => {
-    const yArray = yDocRef.current.getArray('content');
-    yDocRef.current.transact(() => {
-      yArray.delete(index, 1);
-      yArray.insert(index, [newBlock]);
-    });
+  // `block` is the edited block (same nodeId). Only the changed characters are sent.
+  const updateBlock = useCallback((block) => {
+    updateBlockInDoc(yDocRef.current, block);
   }, []);
 
-  const removeBlock = useCallback((index) => {
-    yDocRef.current.getArray('content').delete(index, 1);
+  const removeBlock = useCallback((nodeId) => {
+    removeBlockFromDoc(yDocRef.current, nodeId);
   }, []);
 
-  return { content, addBlock, updateBlock, removeBlock };
+  return { content, addBlock, updateBlock, removeBlock, transport };
 }

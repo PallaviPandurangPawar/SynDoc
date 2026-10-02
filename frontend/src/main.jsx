@@ -1,7 +1,4 @@
 // React entry point
-// TODO: implement
-
-
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';

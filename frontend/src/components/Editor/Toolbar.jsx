@@ -1,14 +1,43 @@
-// Add-block controls + block count + save status
-export default function Toolbar({ onAddBlock, blockCount, saving }) {
+// Add-block controls + block count + connection + save status
+const BLOCK_BUTTONS = [
+  { type: 'paragraph', label: '+ Paragraph' },
+  { type: 'heading', label: '+ Heading' },
+  { type: 'code', label: '+ Code' },
+  { type: 'list', label: '+ List' },
+  { type: 'blockquote', label: '+ Quote' },
+  { type: 'callout', label: '+ Callout' },
+  { type: 'image', label: '+ Image' },
+  { type: 'divider', label: '+ Divider' }
+];
+
+export default function Toolbar({ onAddBlock, blockCount, saving, transport }) {
   return (
     <div className="doc-toolbar">
       <div className="doc-toolbar-left">
         <span className="doc-toolbar-label">Add Block:</span>
-        <button type="button" className="doc-toolbar-btn" onClick={() => onAddBlock('paragraph')}>+ Paragraph</button>
-        <button type="button" className="doc-toolbar-btn" onClick={() => onAddBlock('heading')}>+ Heading</button>
-        <button type="button" className="doc-toolbar-btn" onClick={() => onAddBlock('code')}>+ Code</button>
+        {BLOCK_BUTTONS.map((btn) => (
+          <button
+            key={btn.type}
+            type="button"
+            className="doc-toolbar-btn"
+            onClick={() => onAddBlock(btn.type)}
+          >
+            {btn.label}
+          </button>
+        ))}
       </div>
       <div className="doc-toolbar-right">
+        {transport && (
+          <>
+            <span
+              className={`doc-transport ${transport === 'websocket' ? 'ws' : 'fallback'}`}
+              title={transport === 'websocket' ? 'Connected through the Yjs WebSocket' : 'WebSocket unavailable, using the Socket.io backup'}
+            >
+              {transport === 'websocket' ? '⚡ WebSocket' : '↺ Socket.io'}
+            </span>
+            <span className="doc-toolbar-dot">•</span>
+          </>
+        )}
         <span>{blockCount} block{blockCount === 1 ? '' : 's'}</span>
         <span className="doc-toolbar-dot">•</span>
         {saving ? (

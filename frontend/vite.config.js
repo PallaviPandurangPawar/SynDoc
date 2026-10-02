@@ -11,6 +11,11 @@ export default defineConfig({
       '/socket.io': {
         target: 'http://localhost:5000',
         ws: true
+      },
+      // Yjs WebSocket (real-time document sync)
+      '/yjs': {
+        target: 'http://localhost:5000',
+        ws: true
       }
     }
   }

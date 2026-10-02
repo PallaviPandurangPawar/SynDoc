@@ -132,7 +132,24 @@ function seedInitialContent(documentId, contentArray) {
   const yArray = yDoc.getArray('content');
 
   if (yArray.length === 0 && Array.isArray(contentArray) && contentArray.length > 0) {
-    yArray.push(contentArray);
+        // Each block becomes a Y.Map whose text is a Y.Text, so Yjs tracks typed
+    // characters (deltas) and two people can edit the same block together.
+    yDoc.transact(() => {
+      contentArray.forEach((node) => {
+        const block = new Y.Map();
+        Object.entries(node).forEach(([key, value]) => {
+          // "text" is just a copy of "content" in saved blocks — keep one source of truth
+          if (value === undefined || key === 'content' || key === 'text') return;
+          block.set(key, value);
+        });
+        block.set('content', new Y.Text());
+        yArray.push([block]);
+
+        // Text can only be typed into a Y.Text once the block is part of the document
+        const initialText = node.content || node.text || '';
+        if (initialText) block.get('content').insert(0, initialText);
+      });
+    });
     // Seed counts as a write — encoded cache must reflect the new state
     _invalidateEncodedCache(documentId);
   }
@@ -151,7 +168,9 @@ function getContentSnapshot(documentId) {
   const yDoc = getYDoc(documentId);
   const yArray = yDoc.getArray('content');
   _touch(documentId);
-  return yArray.toArray();
+    // toJSON() turns every block (Y.Map) and its text (Y.Text) into plain data
+  // that can be validated, sanitized and saved to MongoDB.
+  return yArray.toJSON();
 }
 
 // ─── Socket Counter API ───────────────────────────────────────────────────────

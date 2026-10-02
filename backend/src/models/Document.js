@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const ASTNodeSchema = require('./ASTNode');
 require('./User');
 const { validateDocumentContent } = require('../middlewares/validateAST');
+const { sanitizeNode } = require('../middlewares/sanitize');
 
 /**
  * Traverses an AST tree recursively:
@@ -378,6 +379,9 @@ DocumentSchema.index({ updatedAt: -1 });
  */
 function preSaveDocument(doc, next) {
   try {
+    // 0. Security: strip XSS fragments (scripts, event handlers, unsafe links) from every saved block
+    if (Array.isArray(doc.content)) doc.content.forEach(sanitizeNode);
+    if (doc.ast) sanitizeNode(doc.ast);
     // 1. Calculate metrics and structurally validate the AST tree
     if (doc.ast) {
       const metrics = calculateASTMetrics(doc.ast);

@@ -4,10 +4,12 @@
   "description": "SyncDoc frontend - block-based collaborative React editor",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
+  "dev": "vite",
+  "build": "vite build",
+  "preview": "vite preview",
+  "test:yblocks": "node src/lib/yBlocks.test.js",
+  "test:cursor": "node src/lib/cursorMath.test.js"
+},
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
     "axios": "^1.7.4",
