@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSocket } from '../hooks/useSocket';
 import { usePresence } from '../hooks/usePresence';
 import EditorCanvas from '../components/Editor/EditorCanvas';
+import ChatPanel from '../components/Chat/ChatPanel';
 import Loader from '../components/Loader/Loader';
 import './DocumentPage.css';
 
@@ -260,8 +261,11 @@ export default function DocumentPage() {
         </div>
       )}
 
-      <main className="doc-main">
-        <EditorCanvas documentId={id} socket={socket} activeUsers={activeUsers} updateCursor={updateCursor} />
+      <main className="doc-main-wrapper">
+        <ChatPanel />
+        <div className="doc-main">
+          <EditorCanvas documentId={id} socket={socket} activeUsers={activeUsers} updateCursor={updateCursor} />
+        </div>
       </main>
     </div>
   );
