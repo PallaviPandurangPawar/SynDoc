@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDocuments, createDocument, deleteDocument, updateDocument, joinRoomByCode } from '../services/api';
 import Loader from '../components/Loader/Loader';
+import { useAuth } from '../context/AuthContext';
 
 function formatTime(dateString) {
   const d = new Date(dateString);
@@ -22,7 +23,7 @@ export default function Dashboard() {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
-  const [deleteModal, setDeleteModal] = useState(null); // { id, title }
+  const [deleteModal, setDeleteModal] = useState(null); // { id, title, isOwner }
   const [renameModal, setRenameModal] = useState(null); // { id, currentTitle, newTitle }
   const [resultModal, setResultModal] = useState(null); // { message: string }
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -30,6 +31,13 @@ export default function Dashboard() {
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState('');
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // True when the logged-in user created (owns) this document
+  const isOwnerOf = (doc) => {
+    const ownerId = doc.owner && (doc.owner._id || doc.owner);
+    return Boolean(ownerId && user && String(ownerId) === String(user.id));
+  };
 
   useEffect(() => { loadDocuments(); }, []);
 
@@ -84,9 +92,9 @@ export default function Dashboard() {
     }
   };
 
-  const handleDelete = (id, title) => {
+  const handleDelete = (id, title, isOwner) => {
     setOpenMenuId(null);
-    setDeleteModal({ id, title });
+    setDeleteModal({ id, title, isOwner });
   };
 
   const confirmDelete = async () => {
@@ -95,8 +103,9 @@ export default function Dashboard() {
     try {
       await deleteDocument(id);
       setDocuments((prev) => prev.filter((doc) => doc._id !== id));
-    } catch {
-      setResultModal({ type: 'error', message: 'Failed to delete document.' });
+    } catch (error) {
+      const reason = error.response && error.response.data && error.response.data.message;
+      setResultModal({ type: 'error', message: reason || 'Failed to delete document.' });
     }
   };
 
@@ -177,7 +186,9 @@ export default function Dashboard() {
                 <div className="options-menu" onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => handleRename(doc._id, doc.title)}>Rename</button>
                   <div className="menu-divider"></div>
-                  <button className="danger" onClick={() => handleDelete(doc._id, doc.title)}>Delete</button>
+                  <button className="danger" onClick={() => handleDelete(doc._id, doc.title, isOwnerOf(doc))}>
+                    {isOwnerOf(doc) ? 'Delete' : 'Remove from my dashboard'}
+                  </button>
                 </div>
               )}
             </div>
@@ -278,9 +289,11 @@ export default function Dashboard() {
       {deleteModal && (
         <div className="modal-overlay" onClick={() => setDeleteModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">Delete document?</h3>
+            <h3 className="modal-title">{deleteModal.isOwner ? 'Delete document?' : 'Remove from your dashboard?'}</h3>
             <p style={{ color: 'var(--text-light)', fontFamily: 'var(--font-sans)', fontSize: '14px', margin: '0 0 4px 0' }}>
-              Delete "{deleteModal.title}"? This cannot be undone from the app.
+              {deleteModal.isOwner
+                ? `Delete "${deleteModal.title}"? This cannot be undone from the app.`
+                : `Remove "${deleteModal.title}" from your dashboard? Only you lose access. The owner and other members keep the document.`}
             </p>
             <div className="modal-actions">
               <button className="modal-btn-secondary" onClick={() => setDeleteModal(null)}>Cancel</button>

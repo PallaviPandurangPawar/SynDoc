@@ -128,6 +128,21 @@ const deleteDocument = async (id) => {
   return !!result;
 };
 
+
+/**
+ * A member who is not the owner "deletes" a document from their own dashboard:
+ * only that person is removed from the collaborators. Nobody else is affected.
+ * (Uses a direct update, so it does not touch the content or the version history.)
+ */
+const leaveDocument = async (id, userId) => {
+  const result = await Document.updateOne(
+    { _id: id },
+    { $pull: { collaborators: userId } }
+  );
+  return result.modifiedCount > 0;
+};
+
+
 /**
  * Fetch documents currently in the trash (soft-deleted, still within the 7-day window),
  * scoped to documents owned by this user (trash is personal, not shared)
@@ -534,6 +549,7 @@ module.exports = {
   getDocumentHistory,
   addCollaborator,
   removeCollaborator,
+  leaveDocument,
   patchDocumentContent,
   searchDocumentsByTitle,
   getDocumentCount,

@@ -44,4 +44,12 @@ export const getJoinRequests = async (id) => (await api.get(`/documents/${id}/jo
 export const approveJoinRequest = async (id, userId) => (await api.post(`/documents/${id}/join-requests/${userId}/approve`)).data;
 export const rejectJoinRequest = async (id, userId) => (await api.post(`/documents/${id}/join-requests/${userId}/reject`)).data;
 
+// Notifications (messages between users)
+export const getNotifications = async () => (await api.get('/notifications')).data;
+export const sendNotification = async ({ email, message }) => (await api.post('/notifications', { email, message })).data;
+export const markNotificationRead = async (id) => (await api.patch(`/notifications/${id}/read`)).data;
+export const markAllNotificationsRead = async () => (await api.patch('/notifications/read-all')).data;
+export const deleteNotification = async (id) => (await api.delete(`/notifications/${id}`)).data;
+export const clearNotifications = async () => (await api.delete('/notifications')).data;
+
 export default api;

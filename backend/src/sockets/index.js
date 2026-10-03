@@ -3,6 +3,7 @@ const registerSyncHandlers = require('./syncHandler');
 const registerPresenceHandlers = require('./presenceHandler');
 const registerLockHandlers = require('./lockHandler');
 const { initWebSocket, getYDocs } = require('./websocket');
+const { authenticateToken } = require('../middlewares/auth');
 const { corsOptions } = require('../config/cors');
 
 const initSocket = (server) => {
@@ -30,6 +31,9 @@ const initSocket = (server) => {
   io.on('connection', (socket) => {
     console.log(`🔌 [Socket.io] Client connected: ${socket.id}`);
 
+    // Personal room: lets the server send notifications straight to this user
+    socket.join(`user:${socket.data.user._id}`);
+
     registerSyncHandlers(io, socket);
     registerPresenceHandlers(io, socket);
     registerLockHandlers(io, socket);
@@ -53,5 +57,3 @@ initSocket.initWebSocket = initWebSocket;
 initSocket.getYDocs = getYDocs;
 
 module.exports = initSocket;
-
-

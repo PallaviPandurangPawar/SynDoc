@@ -54,7 +54,8 @@ router.use('/:id', requireDocumentAccess);
 router.get('/:id', getDocumentById);
 router.put('/:id', validateAST, updateDocument);
 router.patch('/:id', validateAST, updateDocument);
-router.delete('/:id', requireDocumentOwner, deleteDocument);
+// Owner: moves the document to the trash. Any other member: just removes it from their own dashboard.
+router.delete('/:id', deleteDocument);
 
 // Document lifecycle & collaboration
 router.post('/:id/duplicate', duplicateDocument);

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import NotificationBell from '../Notifications/NotificationBell';
 import '../../pages/Dashboard.css';
 
 export default function AppLayout() {
@@ -52,12 +53,7 @@ export default function AppLayout() {
               <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" />
             </svg>
           </button>
-          <button className="nav-icon-btn" aria-label="Notifications" title="Notifications">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-          </button>
+            <NotificationBell />
         </div>
       </header>
 

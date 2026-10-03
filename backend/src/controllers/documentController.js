@@ -182,7 +182,6 @@ const deleteDocument = async (req, res) => {
       });
     }
 
-    // Ownership check: only enforced if the document already has an owner assigned.
     const existingDoc = await documentService.getDocumentById(id);
     if (!existingDoc) {
       return res.status(404).json({
@@ -190,13 +189,23 @@ const deleteDocument = async (req, res) => {
         message: 'Document not found'
       });
     }
-    if (existingDoc.owner && existingDoc.owner._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to delete this document'
+
+    const isOwner =
+      Boolean(existingDoc.owner) &&
+      existingDoc.owner._id.toString() === req.user._id.toString();
+
+    // Not the owner: "delete" only removes the document from THIS user's own
+    // dashboard. The owner and every other member keep the document untouched.
+    if (!isOwner) {
+      await documentService.leaveDocument(id, req.user._id);
+      return res.status(200).json({
+        success: true,
+        left: true,
+        message: 'Document removed from your dashboard. The owner and other members are not affected.'
       });
     }
 
+    // Owner: moves the document to the trash for everyone
     const isDeleted = await documentService.deleteDocument(id);
 
     if (!isDeleted) {
