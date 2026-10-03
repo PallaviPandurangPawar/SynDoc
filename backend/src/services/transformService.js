@@ -1,6 +1,7 @@
 const Document = require('../models/Document');
 const { astToHtml } = require('../utils/astToHtml');
 const { htmlToPdf } = require('../utils/htmlToPdf');
+const { inlineImages } = require('../utils/imageInliner');
 const { markdownToAst, astToMarkdown } = require('../utils/markdownToAst');
 
 /**
@@ -22,7 +23,7 @@ function convertAstToHtml(ast, options = {}) {
  * @returns {Promise<Buffer>} PDF buffer
  */
 async function convertAstToPdf(ast, options = {}) {
-  const html = astToHtml(ast, options);
+  const html = astToHtml(await inlineImages(ast), options);
   return await htmlToPdf(html, options);
 }
 
@@ -59,7 +60,8 @@ async function exportDocumentAsHtml(documentId, options = {}) {
     ...options
   };
 
-  const html = astToHtml(doc.ast, exportOptions);
+    // Pictures linked from the web are embedded, so the file works offline
+  const html = astToHtml(await inlineImages(doc.ast), exportOptions);
   return {
     html,
     title: exportOptions.title,
@@ -90,7 +92,9 @@ async function exportDocumentAsPdf(documentId, options = {}) {
     ...options
   };
 
-  const html = astToHtml(doc.ast, exportOptions);
+    // Pictures linked from the web are downloaded by the server and embedded,
+  // because the headless browser that prints the PDF is often refused by image sites
+  const html = astToHtml(await inlineImages(doc.ast), exportOptions);
   const pdfBuffer = await htmlToPdf(html, exportOptions);
 
   const sanitizedTitle = title

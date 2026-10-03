@@ -48,6 +48,18 @@ async function htmlToPdf(html, options = {}) {
       });
     }
 
+        // Make sure every picture has finished loading (or failed) before printing
+    try {
+      await page.evaluate(() =>
+        Promise.all(
+          Array.from(document.images).map((img) =>
+            img.complete ? null : new Promise((resolve) => { img.onload = img.onerror = resolve; })
+          )
+        )
+      );
+    } catch {
+      // printing continues even if this check cannot run
+    }
     const defaultMargins = {
       top: '18mm',
       bottom: '18mm',
