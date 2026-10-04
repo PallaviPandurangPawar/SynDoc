@@ -1,5 +1,11 @@
+const dns = require('dns');
 const path = require('path');
 const dotenv = require('dotenv');
+
+// Ensure reliable DNS resolution for MongoDB Atlas SRV records on Windows
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (_) {}
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
