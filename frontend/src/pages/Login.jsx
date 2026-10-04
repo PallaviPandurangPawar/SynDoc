@@ -14,6 +14,34 @@ const GoogleIcon = () => (
   </svg>
 );
 
+function GoogleLoginButton({ onLoginSuccess, onError }) {
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogle = useGoogleLogin({
+    flow: 'auth-code',
+    onSuccess: async ({ code }) => {
+      onError('');
+      setGoogleLoading(true);
+      try {
+        const res = await googleLogin(code);
+        onLoginSuccess(res.data.token, res.data.user);
+      } catch (err) {
+        onError(err.response?.data?.message || 'Google sign-in failed. Please try again.');
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+    onError: () => onError('Google sign-in was cancelled or failed. Please try again.'),
+  });
+
+  return (
+    <button type="button" className="auth-google-btn" onClick={() => handleGoogle()} disabled={googleLoading}>
+      <GoogleIcon />
+      {googleLoading ? 'Signing in...' : 'Continue with Google'}
+    </button>
+  );
+}
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +49,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [googleLoading, setGoogleLoading] = useState(false);
 
   // "Forgot password?" popup
   const [showForgot, setShowForgot] = useState(false);
@@ -51,24 +78,8 @@ export default function Login() {
       setForgotLoading(false);
     }
   };
-  // Opens Google's popup. On success Google gives us a one-time code, and our backend checks it.
-  const handleGoogle = useGoogleLogin({
-    flow: 'auth-code',
-    onSuccess: async ({ code }) => {
-      setError('');
-      setGoogleLoading(true);
-      try {
-        const res = await googleLogin(code);
-        login(res.data.token, res.data.user);
-        navigate('/dashboard');
-      } catch (err) {
-        setError(err.response?.data?.message || 'Google sign-in failed. Please try again.');
-      } finally {
-        setGoogleLoading(false);
-      }
-    },
-    onError: () => setError('Google sign-in was cancelled or failed. Please try again.'),
-  });
+
+  const hasGoogleClientId = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -103,11 +114,18 @@ export default function Login() {
       </form>
 
       <button type="button" className="auth-forgot-link" onClick={openForgot}>Forgot password?</button>
-      <div className="auth-divider"><span>or</span></div>
-      <button type="button" className="auth-google-btn" onClick={() => handleGoogle()} disabled={googleLoading}>
-        <GoogleIcon />
-        {googleLoading ? 'Signing in...' : 'Continue with Google'}
-      </button>
+      {hasGoogleClientId && (
+        <>
+          <div className="auth-divider"><span>or</span></div>
+          <GoogleLoginButton
+            onLoginSuccess={(token, user) => {
+              login(token, user);
+              navigate('/dashboard');
+            }}
+            onError={setError}
+          />
+        </>
+      )}
       <p className="auth-footer">
         Don't have an account? <Link to="/register">Sign up</Link>
       </p>

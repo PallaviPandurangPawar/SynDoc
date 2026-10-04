@@ -22,9 +22,10 @@ const dirty = [
   { nodeId: '3', type: 'image', content: '<b>cap</b>', attributes: { src: 'javascript:alert(1)', alt: '<img src=x onerror=alert(1)>' } },
   { nodeId: '4', type: 'image', content: 'ok', attributes: { src: 'https://example.com/a.png' } },
   { nodeId: '5', type: 'paragraph', content: 'link', attributes: {}, children: [
-      { nodeId: '5a', type: 'text', content: '<i onmouseover=bad()>click</i>', attributes: { link: 'javascript:alert(1)' } },
-      { nodeId: '5b', type: 'text', content: 'good', attributes: { link: 'https://example.com' } }
-  ] }
+      { nodeId: '5a', type: 'text', content: '<i onmouseover=bad()>click</i>', attributes: { link: 'javascript:alert(1)', href: 'javascript:alert(2)', url: 'javascript:alert(3)', onerror: 'alert(4)' } },
+      { nodeId: '5b', type: 'text', content: 'good', attributes: { link: 'https://example.com', href: 'https://example.com/page' } }
+  ] },
+  { nodeId: '6', type: 'callout', content: 'Alert<svg><script>steal()</script></svg>', attributes: { title: '<b>Note</b>', onclick: 'alert(1)' } }
 ];
 const original = JSON.stringify(dirty);
 const clean = sanitizeDocumentContent(dirty);
@@ -40,7 +41,14 @@ check('image caption text cleaned', clean[2].content, 'cap');
 check('https image src kept', clean[3].attributes.src, 'https://example.com/a.png');
 check('nested text cleaned', clean[4].children[0].content, 'click');
 check('javascript: link removed', clean[4].children[0].attributes.link, null);
+check('javascript: href removed', clean[4].children[0].attributes.href, null);
+check('javascript: url removed', clean[4].children[0].attributes.url, null);
+check('onerror event handler stripped from attributes', clean[4].children[0].attributes.onerror, undefined);
 check('https link kept', clean[4].children[1].attributes.link, 'https://example.com');
+check('https href kept', clean[4].children[1].attributes.href, 'https://example.com/page');
+check('svg script removed from callout content', clean[5].content, 'Alert');
+check('title attribute cleaned of tags', clean[5].attributes.title, 'Note');
+check('onclick event handler stripped from callout attributes', clean[5].attributes.onclick, undefined);
 
 console.log(failed === 0 ? '\n✅ ALL SANITIZER CHECKS PASSED' : `\n❌ ${failed} CHECK(S) FAILED`);
 process.exit(failed === 0 ? 0 : 1);

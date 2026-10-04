@@ -62,21 +62,45 @@ function toPlainText(raw) {
 function sanitizeAttributes(attrs) {
   if (!attrs || typeof attrs !== 'object') return;
 
-  if (typeof attrs.src === 'string' && attrs.src && !SAFE_IMAGE.test(attrs.src.trim())) {
-    attrs.src = '';
+  // Image sources
+  for (const srcKey of ['src', 'poster']) {
+    if (typeof attrs[srcKey] === 'string') {
+      const val = attrs[srcKey].trim();
+      if (val && !SAFE_IMAGE.test(val)) {
+        attrs[srcKey] = '';
+      }
+    }
   }
-  if (typeof attrs.link === 'string' && attrs.link && !SAFE_LINK.test(attrs.link.trim())) {
-    attrs.link = null;
+
+  // Links & URLs
+  for (const linkKey of ['link', 'href', 'url']) {
+    if (typeof attrs[linkKey] === 'string') {
+      const val = attrs[linkKey].trim();
+      if (val && !SAFE_LINK.test(val)) {
+        attrs[linkKey] = null;
+      }
+    }
   }
-  for (const key of ['alt', 'caption']) {
+
+  // Text-based metadata attributes
+  for (const key of ['alt', 'caption', 'title', 'label', 'placeholder']) {
     if (typeof attrs[key] === 'string') {
       const clean = toPlainText(attrs[key]);
       if (clean !== attrs[key]) attrs[key] = clean;
     }
   }
-  if (typeof attrs.language === 'string' && !SAFE_LANGUAGE.test(attrs.language)) {
-    attrs.language = 'plaintext';
+
+  // Code block language identifier
+  if (typeof attrs.language === 'string') {
+    attrs.language = SAFE_LANGUAGE.test(attrs.language.trim()) ? attrs.language.trim() : 'plaintext';
   }
+
+  // Strip any inline event handlers (onerror, onclick, onload, etc.) injected as attribute keys
+  Object.keys(attrs).forEach((key) => {
+    if (/^on[a-z]+/i.test(key)) {
+      delete attrs[key];
+    }
+  });
 }
 
 /**
