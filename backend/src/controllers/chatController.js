@@ -1,4 +1,4 @@
-const { askOpenRouter } = require('../services/openRouterService');
+const { askAI } = require('../services/aiService');
 
 const SYSTEM_PROMPT = 'You are a helpful assistant inside a document editor called SyncDoc. Keep answers clear and reasonably concise.';
 
@@ -25,7 +25,7 @@ const askChatbot = async (req, res) => {
       { role: 'user', content: message.trim() }
     ];
 
-    const reply = await askOpenRouter(messages);
+    const reply = await askAI(messages);
 
     return res.status(200).json({ success: true, data: { reply } });
   } catch (error) {
