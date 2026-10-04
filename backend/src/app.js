@@ -44,6 +44,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/room-action', roomActionRoutes);
 app.use('/api/notifications', notificationRoutes);
 
+const chatRoutes = require('./routes/chatRoutes');
+app.use('/api/chat', chatRoutes);
+
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({

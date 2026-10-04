@@ -52,4 +52,7 @@ export const markAllNotificationsRead = async () => (await api.patch('/notificat
 export const deleteNotification = async (id) => (await api.delete(`/notifications/${id}`)).data;
 export const clearNotifications = async () => (await api.delete('/notifications')).data;
 
+// Chatbot (OpenRouter)
+export const askChatbot = async ({ message, history }) => (await api.post('/chat', { message, history })).data;
+
 export default api;
