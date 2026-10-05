@@ -324,6 +324,14 @@ const DocumentSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    // Snapshot of the owner's trash-retention setting, taken at the moment
+    // this document was deleted. Keeping it on the document (rather than
+    // always reading the live user setting) means changing the setting later
+    // only affects future deletions, not items already sitting in the trash.
+    trashRetentionDays: {
+      type: Number,
+      default: 7
+    },
     content: {
       type: [ASTNodeSchema], // Document body as an array of top-level AST nodes
       default: []

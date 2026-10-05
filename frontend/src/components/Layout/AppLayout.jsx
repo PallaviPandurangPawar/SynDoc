@@ -140,7 +140,14 @@ export default function AppLayout() {
               <span className="menu-text">Trash</span>
               {isActive('/trash') && <span className="active-indicator-right"></span>}
             </button>
-            <button className="menu-item"><span className="menu-text">Settings</span></button>
+            <button
+              className={`menu-item${isActive('/settings') ? ' active' : ''}`}
+              onClick={() => navigate('/settings')}
+            >
+              {isActive('/settings') && <span className="active-indicator-left"></span>}
+              <span className="menu-text">Settings</span>
+              {isActive('/settings') && <span className="active-indicator-right"></span>}
+            </button>
           </nav>
 
           <div className="sidebar-bottom">

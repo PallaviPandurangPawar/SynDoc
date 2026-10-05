@@ -1,16 +1,9 @@
 // Trash page — soft-deleted documents, renders inside AppLayout's <Outlet />
 import { useEffect, useMemo, useState } from 'react';
-import { getTrash, restoreDocument, permanentlyDeleteDocument } from '../services/api';
+import { getTrash, getProfile, restoreDocument, permanentlyDeleteDocument } from '../services/api';
+import { timeLeftLabel } from '../lib/trashTime';
 import Loader from '../components/Loader/Loader';
 import './Trash.css';
-
-const TRASH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
-function daysRemaining(deletedAt) {
-  const expiresAt = new Date(deletedAt).getTime() + TRASH_WINDOW_MS;
-  const msLeft = expiresAt - Date.now();
-  return Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
-}
 
 export default function Trash() {
   const [documents, setDocuments] = useState([]);
@@ -20,14 +13,19 @@ export default function Trash() {
   const [search, setSearch] = useState('');
   const [deleteModal, setDeleteModal] = useState(null); // { id, title }
   const [resultModal, setResultModal] = useState(null); // { message: string }
+  const [retentionSetting, setRetentionSetting] = useState(null); // the user's current choice from Settings
 
   useEffect(() => { loadTrash(); }, []);
 
   const loadTrash = async () => {
     try {
       setLoading(true);
-      const res = await getTrash();
+      const [res, profile] = await Promise.all([
+        getTrash(),
+        getProfile().catch(() => null)
+      ]);
       setDocuments(res.data || []);
+      setRetentionSetting(profile && profile.data ? profile.data.trashRetentionDays : null);
     } catch {
       setError('Could not load trash. Is the backend running on port 5000?');
     } finally {
@@ -76,7 +74,9 @@ export default function Trash() {
         <div>
           <h2 className="trash-title">Trash</h2>
           <p className="trash-subtitle">
-            Items are kept for 7 days, then deleted automatically.
+            {retentionSetting
+              ? `Files you delete now are kept for ${retentionSetting} day${retentionSetting === 1 ? '' : 's'}, then removed automatically. Files already here keep the time shown on their card.`
+              : 'Deleted files are removed automatically when their time runs out.'}
           </p>
         </div>
         <div className="trash-search-wrapper">
@@ -97,7 +97,6 @@ export default function Trash() {
           <p className="no-results">{documents.length === 0 ? 'Trash is empty.' : 'No matching documents found.'}</p>
         ) : (
           filteredDocuments.map((doc) => {
-            const days = daysRemaining(doc.deletedAt);
             return (
               <div
                 key={doc._id}
@@ -126,7 +125,7 @@ export default function Trash() {
                   )}
                 </div>
                 <span className="trash-expiry">
-                  {days === 0 ? 'Deletes today' : `${days} day${days === 1 ? '' : 's'} left`}
+                  {timeLeftLabel(doc.deletedAt, doc.trashRetentionDays)}
                 </span>
               </div>
             );

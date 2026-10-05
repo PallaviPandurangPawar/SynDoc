@@ -206,7 +206,7 @@ const deleteDocument = async (req, res) => {
     }
 
     // Owner: moves the document to the trash for everyone
-    const isDeleted = await documentService.deleteDocument(id);
+    const isDeleted = await documentService.deleteDocument(id, req.user.trashRetentionDays || 7);
 
     if (!isDeleted) {
       return res.status(404).json({
