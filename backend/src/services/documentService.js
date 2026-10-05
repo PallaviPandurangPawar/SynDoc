@@ -120,10 +120,11 @@ const updateDocument = async (id, updateFields = {}) => {
  * Soft-delete a document by ID (marks it deleted instead of removing it,
  * so it can be recovered later and its history isn't lost)
  */
-const deleteDocument = async (id) => {
+const deleteDocument = async (id, retentionDays = 7) => {
   const result = await Document.findByIdAndUpdate(id, {
     isDeleted: true,
-    deletedAt: new Date()
+    deletedAt: new Date(),
+    trashRetentionDays: retentionDays
   });
   return !!result;
 };
@@ -149,14 +150,19 @@ const leaveDocument = async (id, userId) => {
  */
 const getTrashedDocuments = async (userId) => {
   if (!userId) return [];
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  return Document.find({
-    isDeleted: true,
-    deletedAt: { $gte: sevenDaysAgo },
-    owner: userId
-  })
+
+  // Each document carries its own retention length (set when it was deleted),
+  // so the "still within the window" check is done per-document here rather
+  // than with a single fixed date filter in the query.
+  const allTrashed = await Document.find({ isDeleted: true, owner: userId })
     .sort({ deletedAt: -1 })
     .populate('owner', 'name email');
+
+  const now = Date.now();
+  return allTrashed.filter((doc) => {
+    const retentionMs = (doc.trashRetentionDays || 7) * 24 * 60 * 60 * 1000;
+    return now - new Date(doc.deletedAt).getTime() < retentionMs;
+  });
 };
 
 /**
@@ -177,11 +183,21 @@ const restoreDocument = async (id, userId) => {
  * Meant to be run periodically (see server.js).
  */
 const purgeExpiredTrash = async () => {
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const result = await Document.deleteMany({
-    isDeleted: true,
-    deletedAt: { $lt: sevenDaysAgo }
-  });
+  // Retention length varies per document, so this checks each one in JS
+  // rather than using one fixed cutoff date in the query.
+  const candidates = await Document.find({ isDeleted: true }).select('_id deletedAt trashRetentionDays');
+
+  const now = Date.now();
+  const expiredIds = candidates
+    .filter((doc) => {
+      const retentionMs = (doc.trashRetentionDays || 7) * 24 * 60 * 60 * 1000;
+      return now - new Date(doc.deletedAt).getTime() >= retentionMs;
+    })
+    .map((doc) => doc._id);
+
+  if (expiredIds.length === 0) return 0;
+
+  const result = await Document.deleteMany({ _id: { $in: expiredIds } });
   return result.deletedCount;
 };
 

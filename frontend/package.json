@@ -9,7 +9,8 @@
   "preview": "vite preview",
   "test:yblocks": "node src/lib/yBlocks.test.js",
   "test:cursor": "node src/lib/cursorMath.test.js",
-  "test:timeago": "node src/lib/timeAgo.test.js"
+  "test:timeago": "node src/lib/timeAgo.test.js",
+  "test:trashtime": "node src/lib/trashTime.test.js"
 },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",

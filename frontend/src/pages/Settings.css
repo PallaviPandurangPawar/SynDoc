@@ -1,0 +1,96 @@
+/* Settings page — additions on top of Dashboard.css */
+
+.settings-page-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start !important;
+  height: auto !important;
+}
+
+.settings-heading {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text-white);
+  margin: 0 0 24px 0;
+}
+
+.settings-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: 640px;
+  background: var(--bg-activity);
+  border: 1px solid var(--accent-gold);
+  border-radius: 14px;
+  box-shadow: 0 0 16px var(--accent-gold-glow);
+  padding: 20px 26px;
+  margin-top: 0;
+}
+
+.settings-card-text h3 {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text-white);
+  margin: 0 0 6px 0;
+}
+
+.settings-card-text p {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.settings-reset-btn {
+  flex-shrink: 0;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, var(--accent-peach) 0%, var(--accent-peach-dark) 100%);
+  border: none;
+  border-radius: 9999px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-dark);
+  cursor: pointer;
+  box-shadow: 0 0 14px var(--accent-peach-glow);
+  transition: transform 0.2s ease, filter 0.2s ease;
+  white-space: nowrap;
+}
+
+.settings-reset-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.settings-reset-btn:active { transform: translateY(0); }
+
+.settings-card + .settings-card {
+  margin-top: 16px;
+}
+
+.settings-saved-note {
+  color: #4caf82;
+  font-weight: 500;
+}
+
+.settings-retention-select {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  background: var(--bg-search);
+  border: 1px solid var(--accent-gold);
+  box-shadow: 0 0 10px var(--accent-gold-glow);
+  border-radius: 9999px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-white);
+  outline: none;
+  cursor: pointer;
+}
+
+.settings-error-note {
+  color: #f87171;
+  font-weight: 500;
+}

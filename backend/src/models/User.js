@@ -40,6 +40,11 @@ const UserSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    trashRetentionDays: {
+      type: Number,
+      default: 7,
+      enum: [1, 5, 7, 10, 15, 20, 25, 30]
+    },
     avatarData: {
       type: String,
       default: '', // Base64 data URL of the uploaded profile photo
