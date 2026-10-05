@@ -9,6 +9,7 @@ import AppLayout from './components/Layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import Trash from './pages/Trash';
 import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 import DocumentPage from './pages/DocumentPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -40,6 +41,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/trash" element={<Trash />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
               </Route>
 
               <Route path="/document/:id" element={<ProtectedRoute><DocumentPage /></ProtectedRoute>} />

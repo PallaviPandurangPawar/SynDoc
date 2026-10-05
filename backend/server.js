@@ -14,6 +14,20 @@ const startServer = async () => {
         const io = initSocket(server);
     app.set('io', io);
 
+
+    // Permanently remove files whose Trash time has run out (now, then once an hour)
+    const documentService = require('./src/services/documentService');
+    const cleanTrash = async () => {
+      try {
+        const removed = await documentService.purgeExpiredTrash();
+        if (removed > 0) console.log(`🗑️ [Trash] Permanently removed ${removed} expired document(s)`);
+      } catch (error) {
+        console.error(`⚠️ [Trash] Cleanup failed: ${error.message}`);
+      }
+    };
+    cleanTrash();
+    setInterval(cleanTrash, 60 * 60 * 1000);
+
     server.listen(PORT, () => {
       console.log(`=========================================`);
       console.log(`🚀 SyncDoc Backend running on port ${PORT}`);

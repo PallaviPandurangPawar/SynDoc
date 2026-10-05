@@ -1,7 +1,16 @@
-import { defineConfig } from 'vite';
+import { defineConfig, createLogger } from 'vite';
+
+// Hide the harmless "ws proxy" warnings when a browser tab disconnects
+const logger = createLogger();
+const originalError = logger.error;
+logger.error = (msg, options) => {
+  if (msg.includes('ws proxy')) return;
+  originalError(msg, options);
+};
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+  customLogger: logger,
   plugins: [react()],
   server: {
     port: 5173,

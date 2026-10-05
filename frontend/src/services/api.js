@@ -26,6 +26,7 @@ export const restoreDocument = async (id) => (await api.patch(`/documents/${id}/
 export const permanentlyDeleteDocument = async (id) => (await api.delete(`/documents/${id}/permanent`)).data;
 export const getProfile = async () => (await api.get('/users/me')).data;
 export const updateProfile = async (payload) => (await api.put('/users/me', payload)).data;
+export const updateTrashRetention = async (days) => (await api.put('/users/me/trash-retention', { days })).data;
 
 export const registerUser = async ({ name, email, password }) => (await api.post('/auth/register', { name, email, password })).data;
 export const verifyOtp = async ({ email, otp }) => (await api.post('/auth/verify-otp', { email, otp })).data;
